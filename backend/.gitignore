@@ -1,0 +1,24 @@
+# 后端特定忽略（根 .gitignore 已覆盖大部分）
+# 这里放后端独有、不会跟前端冲突的规则
+
+# Maven 编译产物（一般 target/ 已在根 ignore）
+target/
+
+# IDE
+.idea/
+*.iml
+.project
+.classpath
+.settings/
+
+# 日志
+logs/
+*.log
+
+# Spring Boot devtools
+.spring-boot-devtools.properties
+
+# 应用配置真实文件（含密钥）
+src/main/resources/application*.yaml
+!src/main/resources/application.yaml.example
+!src/test/resources/application-test.yaml

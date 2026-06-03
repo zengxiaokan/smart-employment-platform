@@ -5,19 +5,12 @@ deploy/.env
 *.env.local
 *.env.production
 
-# 内部文档 / 部署脚本 / AI 协作笔记（不进公开仓库）
+# ==================== 内部文档 / AI 协作笔记 ====================
 docs/
-sql/
-
-# 本地/生产配置（含真实密钥，不进仓库）
-# application.yaml.example 以 .example 结尾，不会匹配下面规则
-# 测试配置 application-test.yaml 保留在仓库，方便 reviewer 运行测试
-src/main/resources/application*.yaml
-!src/test/resources/application-test.yaml
 
 # ==================== 编译产物 ====================
-target/
-dist/
+# 只忽略后端 target/，前端 dist/ 是有意的（reviewer 可直接预览）
+backend/target/
 *.class
 *.jar
 *.war
@@ -26,6 +19,11 @@ dist/
 .idea/
 *.iml
 .vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
 .project
 .classpath
 .settings/
@@ -33,7 +31,14 @@ dist/
 # ==================== 日志 ====================
 logs/
 *.log
+npm-debug.log*
 
 # ==================== OS ====================
-Thumbs.db
 .DS_Store
+Thumbs.db
+
+# ==================== 后端配置保护 ====================
+# 真实 application*.yaml 含密钥，不进仓库
+# application.yaml.example 不会匹配（后缀是 .example）
+backend/src/main/resources/application*.yaml
+!backend/src/test/resources/application-test.yaml

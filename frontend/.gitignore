@@ -1,0 +1,40 @@
+# ==================== 前端特定 ====================
+# 注意：dist/ **有意跟踪** —— reviewer 可直接打开 dist/index.html 预览
+# 如果你不想跟踪 dist/，把下面 dist 那行取消注释即可
+
+# dist
+# dist/
+dist-ssr/
+coverage/
+*.local
+
+# ==================== 依赖 ====================
+node_modules/
+
+# ==================== 日志 ====================
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ==================== IDE ====================
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ==================== Vite 内部 ====================
+*.timestamp-*-*.mjs
+*.tsbuildinfo
+.eslintcache
+
+# ==================== OS ====================
+.DS_Store
+Thumbs.db
