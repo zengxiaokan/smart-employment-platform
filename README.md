@@ -200,7 +200,7 @@ mvn spring-boot:run
 
 ## 📝 License
 
-MIT
+本项目基于 [MIT License](LICENSE) 开源 — 随便用、随便改、能帮就帮、能学就学。
 
 ---
 
