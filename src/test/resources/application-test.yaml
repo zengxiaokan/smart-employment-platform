@@ -1,0 +1,8 @@
+# 测试环境配置
+# 此文件供测试代码使用，加载在 test profile 下
+# 真实密钥仍请通过环境变量注入；此处的 token 是过期的 demo token，仅用于单元测试
+
+test:
+  jwt:
+    # 过期时间 2026-05-08（用于单元测试解析演示，不会影响系统安全）
+    sample-token: eyJhbGciOiJIUzI1NiJ9.eyJpZCI6MSwidXNlcm5hbWUiOiJhZG1pbiIsImV4cCI6MTc3ODQyMDM5M30.MHciLgPJ-c8cSxXXh6iNmh95e41G-cZWXdJSd3mdWIU

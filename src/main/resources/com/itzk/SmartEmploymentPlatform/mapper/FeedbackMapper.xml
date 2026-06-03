@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.itzk.SmartEmploymentPlatform.mapper.FeedbackMapper">
+
+    <insert id="insert" parameterType="com.itzk.SmartEmploymentPlatform.pojo.entry.Feedback"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO feedbacks (user_id, type, title, content, images, status, target_type, target_id, created_at, updated_at)
+        VALUES (#{userId}, #{type}, #{title}, #{content}, #{images}, 0, #{targetType}, #{targetId}, NOW(), NOW())
+    </insert>
+
+    <update id="updateReply">
+        UPDATE feedbacks SET reply = #{reply}, status = 2, replied_at = NOW(), updated_at = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <select id="selectAdminList" resultType="com.itzk.SmartEmploymentPlatform.pojo.vo.FeedbackVO">
+        SELECT f.id, f.user_id AS userId, u.username,
+               f.type, f.title, f.content, f.images, f.status, f.reply,
+               f.target_type AS targetType, f.target_id AS targetId,
+               DATE_FORMAT(f.replied_at, '%Y-%m-%d %H:%i:%s') AS repliedAt,
+               DATE_FORMAT(f.created_at, '%Y-%m-%d %H:%i:%s') AS createdAt,
+               DATE_FORMAT(f.updated_at, '%Y-%m-%d %H:%i:%s') AS updatedAt
+        FROM feedbacks f
+        LEFT JOIN users u ON f.user_id = u.id
+        WHERE 1=1
+        <if test="type != null">
+            AND f.type = #{type}
+        </if>
+        <if test="status != null">
+            AND f.status = #{status}
+        </if>
+        ORDER BY f.created_at DESC
+    </select>
+
+</mapper>

@@ -1,0 +1,333 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.itzk.SmartEmploymentPlatform.mapper.ResumeMapper">
+
+    <!-- 分页 + 条件查询简历列表 -->
+    <select id="listResumes" parameterType="com.itzk.SmartEmploymentPlatform.pojo.entryDTO.ResumeQueryDTO"
+            resultType="com.itzk.SmartEmploymentPlatform.pojo.entry.Resume">
+        SELECT id, resume_name,user_id, name, phone, email, age, gender,skills,
+               self_description, job_intention, city, salary_min, salary_max,
+               job_type, industry, available_from, graduation_school,
+               total_work_years, max_education,
+               created_at, updated_at,is_default,character_avatar
+        FROM resumes
+        WHERE user_id = #{userId}
+        <if test="city != null and city != ''">
+                AND city = #{city}
+            </if>
+            <if test="jobIntention != null and jobIntention != ''">
+                AND job_intention LIKE CONCAT('%', #{jobIntention}, '%')
+            </if>
+            <if test="keyword != null and keyword != ''">
+                AND (name LIKE CONCAT('%', #{keyword}, '%')
+                     OR job_intention LIKE CONCAT('%', #{keyword}, '%')
+                     OR self_description LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+        ORDER BY updated_at DESC
+    </select>
+
+    <!-- 根据ID查询单份简历 -->
+    <select id="getResumeById" resultType="com.itzk.SmartEmploymentPlatform.pojo.entry.Resume">
+        SELECT id, resume_name,user_id, name, phone, email, age, gender,skills,
+               self_description, job_intention, city, salary_min, salary_max,character_avatar,
+               job_type, industry, available_from, graduation_school,
+               total_work_years, max_education,
+               created_at, updated_at
+        FROM resumes
+        WHERE id = #{id}
+    </select>
+
+    <!-- 新增简历 -->
+    <insert id="insertResume" parameterType="com.itzk.SmartEmploymentPlatform.pojo.entry.Resume"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO resumes (resume_name,user_id, name, phone, email, age, gender,skills,
+                             self_description, job_intention, city, salary_min, salary_max,
+                             job_type, industry, available_from, graduation_school,
+                             total_work_years, max_education,
+                             created_at, updated_at,character_avatar,is_default)
+        VALUES (#{resumeName},#{userId}, #{name}, #{phone}, #{email}, #{age}, #{gender},#{skills},
+                #{selfDescription}, #{jobIntention}, #{city}, #{salaryMin}, #{salaryMax},
+                #{jobType}, #{industry}, #{availableFrom}, #{graduationSchool},
+                #{totalWorkYears}, #{maxEducation},
+                NOW(), NOW(),#{characterAvatar},#{isDefault})
+    </insert>
+
+    <!-- 更新简历主表 -->
+    <update id="updateResume" parameterType="com.itzk.SmartEmploymentPlatform.pojo.entry.Resume">
+        UPDATE resumes
+        <set>
+            <if test="resumeName != null"> resume_name = #{resumeName},</if>
+            <if test="name != null">name = #{name},</if>
+            <if test="phone != null">phone = #{phone},</if>
+            <if test="email != null">email = #{email},</if>
+            <if test="age != null">age = #{age},</if>
+            <if test="gender != null">gender = #{gender},</if>
+            <if test="skills != null">skills = #{skills},</if>
+            <if test="selfDescription != null">self_description = #{selfDescription},</if>
+            <if test="jobIntention != null">job_intention = #{jobIntention},</if>
+            <if test="city != null">city = #{city},</if>
+            <if test="salaryMin != null">salary_min = #{salaryMin},</if>
+            <if test="salaryMax != null">salary_max = #{salaryMax},</if>
+            <if test="characterAvatar != null">character_avatar = #{characterAvatar},</if>
+            <if test="jobType != null">job_type = #{jobType},</if>
+            <if test="industry != null">industry = #{industry},</if>
+            <if test="availableFrom != null">available_from = #{availableFrom},</if>
+            <if test="graduationSchool != null">graduation_school = #{graduationSchool},</if>
+            <if test="totalWorkYears != null">total_work_years = #{totalWorkYears},</if>
+            <if test="maxEducation != null">max_education = #{maxEducation},</if>
+            updated_at = NOW()
+        </set>
+        WHERE id = #{id} AND user_id = #{userId}
+    </update>
+
+    <!-- 删除简历 -->
+    <delete id="deleteResume">
+        DELETE FROM resumes WHERE id = #{id}
+    </delete>
+
+    <!-- 批量查询简历（仅已投递该岗位的候选人） -->
+    <select id="getResumesByIds" resultType="com.itzk.SmartEmploymentPlatform.pojo.entry.Resume">
+        SELECT id, resume_name, user_id, name, phone, email, age, gender, skills,
+               self_description, job_intention, city, salary_min, salary_max, character_avatar,
+               job_type, industry, available_from, graduation_school,
+               total_work_years, max_education, created_at, updated_at
+        FROM resumes
+        WHERE id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </select>
+
+    <!-- ==================== 教育经历 ==================== -->
+
+    <select id="getEducationsByResumeId"
+            resultType="com.itzk.SmartEmploymentPlatform.pojo.entry.ResumeEducation">
+        SELECT id, resume_id, school, major, education, description,start_time, end_time, created_at
+        FROM resume_educations
+        WHERE resume_id = #{resumeId}
+        ORDER BY start_time DESC
+    </select>
+
+    <select id="getEducationsByResumeIds"
+            resultType="com.itzk.SmartEmploymentPlatform.pojo.entry.ResumeEducation">
+        SELECT id, resume_id, school, major, education, description, start_time, end_time, created_at
+        FROM resume_educations
+        WHERE resume_id IN
+        <foreach collection="resumeIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        ORDER BY start_time DESC
+    </select>
+
+    <insert id="batchInsertEducations" parameterType="list">
+        INSERT INTO resume_educations (resume_id, school, major, education, description,start_time, end_time, created_at)
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.resumeId}, #{item.school}, #{item.major}, #{item.education},
+             #{item.description},#{item.startTime}, #{item.endTime}, NOW())
+        </foreach>
+    </insert>
+
+    <delete id="deleteEducationsByResumeId">
+        DELETE FROM resume_educations WHERE resume_id = #{resumeId}
+    </delete>
+
+    <!-- ==================== 工作经历 ==================== -->
+
+    <select id="getExperiencesByResumeId"
+            resultType="com.itzk.SmartEmploymentPlatform.pojo.entry.ResumeExperience">
+        SELECT id, resume_id, company, position, start_time, end_time, description, created_at
+        FROM resume_experiences
+        WHERE resume_id = #{resumeId}
+        ORDER BY start_time DESC
+    </select>
+
+    <insert id="batchInsertExperiences" parameterType="list">
+        INSERT INTO resume_experiences (resume_id, company, position, start_time, end_time, description, created_at)
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.resumeId}, #{item.company}, #{item.position},
+             #{item.startTime}, #{item.endTime}, #{item.description}, NOW())
+        </foreach>
+    </insert>
+
+    <delete id="deleteExperiencesByResumeId">
+        DELETE FROM resume_experiences WHERE resume_id = #{resumeId}
+    </delete>
+
+    <!-- ==================== 项目经历 ==================== -->
+
+    <select id="getProjectsByResumeId"
+            resultType="com.itzk.SmartEmploymentPlatform.pojo.entry.ResumeProject">
+        SELECT id, resume_id, name, role, start_time, end_time, description, created_at
+        FROM resume_projects
+        WHERE resume_id = #{resumeId}
+        ORDER BY start_time DESC
+    </select>
+    <select id="getAllIntention" resultType="com.itzk.SmartEmploymentPlatform.pojo.entry.Resume">
+        SELECT id, resume_name,user_id, name, phone, email, age, gender,skills,
+        self_description, job_intention, city, salary_min, salary_max,
+        job_type, industry, available_from, graduation_school,
+        total_work_years, max_education,
+        created_at, updated_at,is_default,character_avatar
+        FROM resumes
+        <where>
+            <if test="userId != null">
+                AND user_id = #{userId}
+            </if>
+            <if test="city != null and city != ''">
+                AND city = #{city}
+            </if>
+            <if test="jobIntention != null and jobIntention != ''">
+                AND job_intention LIKE CONCAT('%', #{jobIntention}, '%')
+            </if>
+            <if test="totalWorkYears != null ">
+                AND total_work_years &gt;= #{totalWorkYears}
+            </if>
+            <if test="maxEducation != null ">
+                AND max_education &gt;= #{maxEducation}
+            </if>
+            <if test="salaryMin != null and salaryMax != null">
+                and salary_min &gt;= #{salaryMin}
+                and salary_max &lt;= #{salaryMax}
+            </if>
+
+            <if test="keyword != null and keyword != ''">
+                AND (name LIKE CONCAT('%', #{keyword}, '%')
+                OR job_intention LIKE CONCAT('%', #{keyword}, '%')
+                OR skills LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+        and is_default = 1
+        </where>
+        ORDER BY updated_at DESC
+    </select>
+
+
+    <insert id="batchInsertProjects" parameterType="list">
+        INSERT INTO resume_projects (resume_id, name, role, start_time, end_time, description, created_at)
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.resumeId}, #{item.name}, #{item.role},
+             #{item.startTime}, #{item.endTime}, #{item.description}, NOW())
+        </foreach>
+    </insert>
+
+    <delete id="deleteProjectsByResumeId">
+        DELETE FROM resume_projects WHERE resume_id = #{resumeId}
+    </delete>
+
+    <!-- ==================== 单表操作：教育经历 ==================== -->
+
+    <!-- 新增单条教育经历 -->
+    <insert id="insertEducation" parameterType="com.itzk.SmartEmploymentPlatform.pojo.entry.ResumeEducation"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO resume_educations (resume_id, school, major, education, description, start_time, end_time, created_at)
+        VALUES (#{resumeId}, #{school}, #{major}, #{education}, #{description}, #{startTime}, #{endTime}, NOW())
+    </insert>
+
+    <!-- 更新单条教育经历 -->
+    <update id="updateEducation" parameterType="com.itzk.SmartEmploymentPlatform.pojo.entry.ResumeEducation">
+        UPDATE resume_educations
+        <set>
+            <if test="resumeId != null">resume_id = #{resumeId},</if>
+            <if test="school != null">school = #{school},</if>
+            <if test="major != null">major = #{major},</if>
+            <if test="education != null">education = #{education},</if>
+            <if test="description != null">description = #{description},</if>
+            <if test="startTime != null">start_time = #{startTime},</if>
+            <if test="endTime != null">end_time = #{endTime},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <!-- 根据ID删除单条教育经历 -->
+    <delete id="deleteEducationById">
+        DELETE FROM resume_educations WHERE id = #{id}
+    </delete>
+
+    <!-- ==================== 单表操作：工作经历 ==================== -->
+
+    <!-- 新增单条工作经历 -->
+    <insert id="insertExperience" parameterType="com.itzk.SmartEmploymentPlatform.pojo.entry.ResumeExperience"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO resume_experiences (resume_id, company, position, start_time, end_time, description, created_at)
+        VALUES (#{resumeId}, #{company}, #{position}, #{startTime}, #{endTime}, #{description}, NOW())
+    </insert>
+
+    <!-- 更新单条工作经历 -->
+    <update id="updateExperience" parameterType="com.itzk.SmartEmploymentPlatform.pojo.entry.ResumeExperience">
+        UPDATE resume_experiences
+        <set>
+            <if test="resumeId != null">resume_id = #{resumeId},</if>
+            <if test="company != null">company = #{company},</if>
+            <if test="position != null">position = #{position},</if>
+            <if test="startTime != null">start_time = #{startTime},</if>
+            <if test="endTime != null">end_time = #{endTime},</if>
+            <if test="description != null">description = #{description},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <!-- 根据ID删除单条工作经历 -->
+    <delete id="deleteExperienceById">
+        DELETE FROM resume_experiences WHERE id = #{id}
+    </delete>
+
+    <!-- ==================== 单表操作：项目经历 ==================== -->
+
+    <!-- 新增单条项目经历 -->
+    <insert id="insertProject" parameterType="com.itzk.SmartEmploymentPlatform.pojo.entry.ResumeProject"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO resume_projects (resume_id, name, role, start_time, end_time, description, created_at)
+        VALUES (#{resumeId}, #{name}, #{role}, #{startTime}, #{endTime}, #{description}, NOW())
+    </insert>
+
+    <!-- 更新单条项目经历 -->
+    <update id="updateProject" parameterType="com.itzk.SmartEmploymentPlatform.pojo.entry.ResumeProject">
+        UPDATE resume_projects
+        <set>
+            <if test="resumeId != null">resume_id = #{resumeId},</if>
+            <if test="name != null">name = #{name},</if>
+            <if test="role != null">role = #{role},</if>
+            <if test="startTime != null">start_time = #{startTime},</if>
+            <if test="endTime != null">end_time = #{endTime},</if>
+            <if test="description != null">description = #{description},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <!-- 根据ID删除单条项目经历 -->
+    <delete id="deleteProjectById">
+        DELETE FROM resume_projects WHERE id = #{id}
+    </delete>
+
+    <select id="selectAdminList" resultType="com.itzk.SmartEmploymentPlatform.pojo.vo.AdminResumeVO">
+        SELECT r.id, r.user_id AS userId, u.username,
+               r.resume_name AS resumeName,
+               r.name, r.phone, r.email, r.age, r.gender,
+               r.skills, r.self_description AS selfDescription,
+               r.job_intention AS jobIntention, r.city,
+               r.salary_min AS salaryMin, r.salary_max AS salaryMax,
+               r.character_avatar AS characterAvatar,
+               r.is_default AS isDefault, r.job_type AS jobType,
+               r.industry, r.available_from AS availableFrom,
+               r.graduation_school AS graduationSchool,
+               r.total_work_years AS totalWorkYears,
+               r.max_education AS maxEducation,
+               DATE_FORMAT(r.created_at, '%Y-%m-%d %H:%i:%s') AS createdAt,
+               DATE_FORMAT(r.updated_at, '%Y-%m-%d %H:%i:%s') AS updatedAt
+        FROM resumes r
+        LEFT JOIN users u ON r.user_id = u.id
+        WHERE 1=1
+        <if test="name != null and name != ''">
+            AND r.name LIKE CONCAT('%', #{name}, '%')
+        </if>
+        <if test="jobIntention != null and jobIntention != ''">
+            AND r.job_intention LIKE CONCAT('%', #{jobIntention}, '%')
+        </if>
+        ORDER BY r.is_default DESC, r.updated_at DESC
+    </select>
+
+</mapper>

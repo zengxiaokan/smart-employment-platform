@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.itzk.SmartEmploymentPlatform.mapper.ConversationMapper">
+
+    <!-- 插入新会话，配合数据库 UNIQUE KEY (user1_id, user2_id) 防止重复 -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO conversations (user1_id, user2_id, user1_nickname, user1_avatar, user2_nickname, user2_avatar, created_at, updated_at)
+        VALUES (#{user1Id}, #{user2Id}, #{user1Nickname}, #{user1Avatar}, #{user2Nickname}, #{user2Avatar}, NOW(), NOW())
+    </insert>
+
+    <!-- 查询当前用户的所有会话。
+         使用 CASE WHEN 将 user1/user2 统一转换为 target 视角：
+         - targetUserId / targetNickname / targetAvatar 始终是"对方"的信息
+         - unreadCount 是"当前用户"的未读数 -->
+    <select id="selectByUserId" resultType="com.itzk.SmartEmploymentPlatform.pojo.vo.ConversationVO">
+        SELECT
+            c.id,
+            CASE WHEN c.user1_id = #{userId} THEN c.user2_id ELSE c.user1_id END AS targetUserId,
+            CASE WHEN c.user1_id = #{userId} THEN c.user2_nickname ELSE c.user1_nickname END AS targetNickname,
+            CASE WHEN c.user1_id = #{userId} THEN c.user2_avatar ELSE c.user1_avatar END AS targetAvatar,
+            c.last_message AS lastMessage,
+            c.last_message_time AS lastMessageTime,
+            CASE WHEN c.user1_id = #{userId} THEN c.user1_unread_count ELSE c.user2_unread_count END AS unreadCount
+        FROM conversations c
+        WHERE c.user1_id = #{userId} OR c.user2_id = #{userId}
+        ORDER BY c.last_message_time DESC
+    </select>
+
+</mapper>

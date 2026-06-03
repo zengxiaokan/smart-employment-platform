@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.itzk.SmartEmploymentPlatform.mapper.CompanyMapper">
+    <insert id="insert"  parameterType="com.itzk.SmartEmploymentPlatform.pojo.entry.Company" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+        INSERT INTO companies
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="name != null">name,</if>
+            <if test="description != null">description,</if>
+            <if test="industry != null">industry,</if>
+            <if test="size != null">size,</if>
+            <if test="city != null">city,</if>
+            <if test="address != null">address,</if>
+            <if test="logoUrl != null">logo_url,</if>
+            <if test="licenseUrl != null">license_url,</if>
+            <if test="auditStatus != null">audit_status,</if>
+            <if test="jobCount != null">job_count,</if>
+            <if test="jobConfirm != null">job_confirm,</if>
+            <if test="financingStage != null">financing_stage,</if>
+            <if test="officialWeb != null">official_web,</if>
+            <if test="phone != null">phone,</if>
+            <if test="userId != null">user_id,</if>
+            <if test="createdAt != null">created_at,</if>
+            <if test="updatedAt != null">updated_at,</if>
+        </trim>
+        <trim prefix="VALUES (" suffix=")" suffixOverrides=",">
+            <if test="name != null">#{name},</if>
+            <if test="description != null">#{description},</if>
+            <if test="industry != null">#{industry},</if>
+            <if test="size != null">#{size},</if>
+            <if test="city != null">#{city},</if>
+            <if test="address != null">#{address},</if>
+            <if test="logoUrl != null">#{logoUrl},</if>
+            <if test="licenseUrl != null">#{licenseUrl},</if>
+            <if test="auditStatus != null">#{auditStatus},</if>
+            <if test="jobCount != null">#{jobCount},</if>
+            <if test="jobConfirm != null">#{jobConfirm},</if>
+            <if test="financingStage != null">#{financingStage},</if>
+            <if test="officialWeb != null">#{officialWeb},</if>
+            <if test="phone != null">#{phone},</if>
+            <if test="userId != null">#{userId},</if>
+            <if test="createdAt != null">#{createdAt},</if>
+            <if test="updatedAt != null">#{updatedAt},</if>
+        </trim>
+    </insert>
+    <update id="updataById">
+        UPDATE companies
+        <set>
+            <if test="name != null and name != ''">
+                name = #{name},
+            </if>
+            <if test="description != null">
+                description = #{description},
+            </if>
+            <if test="industry != null and industry != ''">
+                industry = #{industry},
+            </if>
+            <if test="size != null and size != ''">
+                size = #{size},
+            </if>
+            <if test="city != null and city != ''">
+                city = #{city},
+            </if>
+            <if test="address != null">
+                address = #{address},
+            </if>
+            <if test="logoUrl != null">
+                logo_url = #{logoUrl},
+            </if>
+            <if test="licenseUrl != null">
+                license_url = #{licenseUrl},
+            </if>
+            <if test="auditStatus != null">
+                audit_status = #{auditStatus},
+            </if>
+            <if test="jobCount != null">
+                job_count = #{jobCount},
+            </if>
+            <if test="jobConfirm != null">
+                job_confirm = #{jobConfirm},
+            </if>
+            <if test="financingStage != null">
+                financing_stage = #{financingStage},
+            </if>
+            <if test="officialWeb != null">
+                official_web = #{officialWeb},
+            </if>
+            <if test="phone != null">
+                phone = #{phone},
+            </if>
+            <if test="userId != null">
+                user_id = #{userId},
+            </if>
+            updated_at = NOW()
+        </set>
+        WHERE id = #{id}
+    </update>
+
+
+    <select id="getDistinctIndustries" resultType="java.lang.String">
+        SELECT DISTINCT industry
+        FROM companies
+        WHERE industry IS NOT NULL AND industry != ''
+    </select>
+
+    <select id="getDistinctSizes" resultType="java.lang.String">
+        SELECT DISTINCT size
+        FROM companies
+        WHERE size IS NOT NULL AND size != ''
+    </select>
+
+    <select id="selectCompanyList" resultType="com.itzk.SmartEmploymentPlatform.pojo.vo.CompanyVO">
+        SELECT
+        id,
+        name,
+        description,
+        industry,
+        size,
+        city,
+        address,
+        logo_url AS logoUrl,
+        audit_status AS auditStatus,
+        created_at AS createdAt,
+        job_count As jobCount,
+        financing_stage As financingStage,
+        official_web As officialWeb,
+        phone
+
+        FROM companies
+        WHERE 1=1
+        <!-- 关键词模糊搜索企业名称 -->
+        <if test="keyword != null and keyword != ''">
+            AND name LIKE CONCAT('%', #{keyword}, '%')
+        </if>
+        <!-- 按行业筛选 -->
+        <if test="industry != null and industry != ''">
+            AND industry = #{industry}
+        </if>
+        <!-- 按企业规模筛选 -->
+        <if test="companySize != null and companySize != ''">
+            AND size = #{companySize}
+        </if>
+        <!-- 按城市筛选 -->
+        <if test="city != null and city != ''">
+            AND city = #{city}
+        </if>
+        <!-- 按审核状态筛选（默认只显示已通过的企业） -->
+        <if test="auditStatus != null">
+            AND audit_status = #{auditStatus}
+        </if>
+        ORDER BY created_at DESC
+    </select>
+    <select id="selectAdminList" resultType="com.itzk.SmartEmploymentPlatform.pojo.vo.AdminCompanyVO">
+        SELECT c.id, c.name, c.industry, c.size, c.city, c.address,
+               c.audit_status AS auditStatus, c.phone, c.financing_stage AS financingStage,
+               c.official_web AS officialWeb, c.description,
+               c.logo_url AS logoUrl, c.license_url AS licenseUrl,
+               COALESCE(u.realname, u.nickname, '') AS registrant,
+               DATE_FORMAT(c.created_at, '%Y-%m-%d %H:%i:%s') AS createdAt
+        FROM companies c
+        LEFT JOIN users u ON c.user_id = u.id
+        WHERE 1=1
+        <if test="name != null and name != ''">
+            AND c.name LIKE CONCAT('%', #{name}, '%')
+        </if>
+        <if test="industry != null and industry != ''">
+            AND c.industry = #{industry}
+        </if>
+        <if test="auditStatus != null">
+            AND c.audit_status = #{auditStatus}
+        </if>
+        ORDER BY c.created_at DESC
+    </select>
+
+
+</mapper>

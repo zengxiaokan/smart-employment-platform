@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.itzk.SmartEmploymentPlatform.mapper.CompanyResumeMapper">
+    <insert id="insert">
+            INSERT INTO company_resume
+            <trim prefix="(" suffix=")" suffixOverrides=",">
+                <if test="companyId != null">company_id,</if>
+                <if test="userId != null">user_id,</if>
+                <if test="resumeId != null">resume_id,</if>
+                <if test="remark != null">remark,</if>
+                <!-- created_at 使用数据库默认值，不插入 -->
+            </trim>
+            <trim prefix="VALUES (" suffix=")" suffixOverrides=",">
+                <if test="companyId != null">#{companyId},</if>
+                <if test="userId != null">#{userId},</if>
+                <if test="resumeId != null">#{resumeId},</if>
+                <if test="remark != null">#{remark},</if>
+            </trim>
+    </insert>
+    <select id="getRemarkByIds" resultType="com.itzk.SmartEmploymentPlatform.pojo.entry.FavorResumDTO">
+
+            SELECT *
+            FROM company_resume
+            WHERE resume_id IN
+            <foreach collection="ids" item="id" open="(" separator="," close=")">
+                #{id}
+            </foreach>
+    </select>
+</mapper>

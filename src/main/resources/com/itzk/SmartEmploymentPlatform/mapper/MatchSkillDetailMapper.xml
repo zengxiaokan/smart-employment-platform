@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.itzk.SmartEmploymentPlatform.mapper.MatchSkillDetailMapper">
+
+    <insert id="batchInsert" parameterType="list">
+        INSERT INTO match_skill_details (match_id, skill_name, matched)
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.matchId}, #{item.skillName}, #{item.matched})
+        </foreach>
+    </insert>
+
+    <select id="selectByMatchId" resultType="com.itzk.SmartEmploymentPlatform.pojo.entry.MatchSkillDetail">
+        SELECT id, match_id, skill_name, matched
+        FROM match_skill_details
+        WHERE match_id = #{matchId}
+    </select>
+
+    <select id="selectByMatchIds" resultType="com.itzk.SmartEmploymentPlatform.pojo.entry.MatchSkillDetail">
+        SELECT id, match_id, skill_name, matched
+        FROM match_skill_details
+        WHERE match_id IN
+        <foreach collection="list" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </select>
+
+</mapper>

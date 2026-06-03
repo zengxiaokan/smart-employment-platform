@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.itzk.SmartEmploymentPlatform.mapper.JobsMapper">
+
+    <!-- 分页 + 条件查询 -->
+    <select id="listJobs" parameterType="com.itzk.SmartEmploymentPlatform.pojo.entry.Job" resultType="com.itzk.SmartEmploymentPlatform.pojo.entry.Job">
+        SELECT
+        id,
+        company_id,
+        hr_user_id,
+        title,
+        category,
+        salary_min,
+        salary_max,
+        city,
+        address,
+        experience,
+        education,
+        job_skills,
+        tags,
+        headcount,
+        duty_content,
+        require_content,
+        benefits,
+        status,
+        view_count,
+        apply_count,
+        created_at,
+        updated_at,
+        hr_user_id,
+        has_count
+        FROM jobs
+        WHERE status = 1
+
+        <!-- 城市筛选 -->
+        <if test="city != null and city != ''">
+            AND city = #{city}
+        </if>
+
+        <!-- 搜索关键词：职位名 + 公司名 -->
+        <if test="keyword != null and keyword != ''">
+            AND (
+            title LIKE CONCAT('%', #{keyword}, '%')
+            OR category LIKE CONCAT('%', #{keyword}, '%')
+            )
+        </if>
+
+        ORDER BY created_at DESC
+    </select>
+
+    <!-- 根据ID查询 -->
+    <select id="getJobById" resultType="com.itzk.SmartEmploymentPlatform.pojo.entry.Job">
+        SELECT * FROM jobs WHERE id = #{id}
+    </select>
+    <select id="getCompanyIdByjobId" resultType="com.itzk.SmartEmploymentPlatform.pojo.entry.Job">
+        SELECT * FROM jobs WHERE id = #{jobId}
+    </select>
+    <select id="selectBatchIds" resultType="com.itzk.SmartEmploymentPlatform.pojo.entry.Job">
+        SELECT * FROM jobs
+        WHERE id IN
+        <foreach collection="idList" item="item" open="(" separator="," close=")">
+            #{item}
+        </foreach>
+    </select>
+
+    <!--推荐算法-->
+    <!-- 你要的技能查询方法（返回完整Job对象） -->
+    <select id="getjobsBySkill" resultType="com.itzk.SmartEmploymentPlatform.pojo.entry.Job">
+        SELECT * FROM jobs
+        <where>
+            <foreach collection="userSkill" item="val" separator=" OR ">
+                FIND_IN_SET(#{val}, job_skills)
+            </foreach>
+        </where>
+        ORDER BY created_at DESC
+        LIMIT 20
+    </select>
+    <select id="getALLJobBuCompanyId" parameterType="com.itzk.SmartEmploymentPlatform.pojo.entry.Job" resultType="com.itzk.SmartEmploymentPlatform.pojo.entry.Job">
+        select * from jobs
+        WHERE  company_id = #{companyId}
+        <if test="jobQueryDTO.status != null">
+            AND status = #{jobQueryDTO.status}
+        </if>
+
+        <!-- 城市筛选 -->
+        <if test="jobQueryDTO.city != null and jobQueryDTO.city != ''">
+            AND city = #{jobQueryDTO.city}
+        </if>
+
+        <!-- 搜索关键词：职位名 + 公司名 -->
+        <if test="jobQueryDTO.keyword != null and jobQueryDTO.keyword != ''">
+            AND (
+            title LIKE CONCAT('%', #{jobQueryDTO.keyword}, '%')
+            OR category LIKE CONCAT('%', #{jobQueryDTO.keyword}, '%')
+            )
+        </if>
+        <if test="start != null and end != null">
+            AND created_at between #{start} and #{end}
+        </if>
+
+
+        ORDER BY updated_at DESC
+
+    </select>
+
+    <!-- 浏览量+1 -->
+    <update id="addViewCount">
+        UPDATE jobs
+        SET view_count = view_count + 1
+        WHERE id = #{id}
+    </update>
+
+
+    <insert id="insert" parameterType="com.itzk.SmartEmploymentPlatform.pojo.entryDTO.JobDTO"
+            useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+        INSERT INTO jobs
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="companyId != null">company_id,</if>
+            <if test="hrUserId != null">hr_user_id,</if>
+            <if test="title != null and title != ''">title,</if>
+            <if test="category != null and category != ''">category,</if>
+            <if test="salaryMin != null">salary_min,</if>
+            <if test="salaryMax != null">salary_max,</if>
+            <if test="city != null and city != ''">city,</if>
+            <if test="address != null and address != ''">address,</if>
+            <if test="experience != null and experience != ''">experience,</if>
+            <if test="education != null">education,</if>
+            <if test="tags != null and tags != ''">tags,</if>
+            <if test="jobSkills != null and jobSkills != ''">job_skills,</if>
+            <if test="headcount != null">headcount,</if>
+            <if test="dutyContent != null and dutyContent != ''">duty_content,</if>
+            <if test="requireContent != null and requireContent != ''">require_content,</if>
+            <if test="benefits != null and benefits != ''">benefits,</if>
+            <if test="status != null">status,</if>
+            <if test="viewCount != null">view_count,</if>
+            <if test="applyCount != null">apply_count,</if>
+            <if test="createdAt != null">created_at,</if>
+            <if test="updatedAt != null">updated_at,</if>
+            <if test="hasCount !=null">has_count ,</if>
+            <if test="pendingAdjust !=null">pending_adjust,</if>
+        </trim>
+        <trim prefix="VALUES (" suffix=")" suffixOverrides=",">
+            <if test="companyId != null">#{companyId},</if>
+            <if test="hrUserId != null">#{hrUserId},</if>
+            <if test="title != null and title != ''">#{title},</if>
+            <if test="category != null and category != ''">#{category},</if>
+            <if test="salaryMin != null">#{salaryMin},</if>
+            <if test="salaryMax != null">#{salaryMax},</if>
+            <if test="city != null and city != ''">#{city},</if>
+            <if test="address != null and address != ''">#{address},</if>
+            <if test="experience != null and experience != ''">#{experience},</if>
+            <if test="education != null">#{education},</if>
+            <if test="tags != null and tags != ''">#{tags},</if>
+            <if test="jobSkills != null and jobSkills != ''">#{jobSkills},</if>
+            <if test="headcount != null">#{headcount},</if>
+            <if test="dutyContent != null and dutyContent != ''">#{dutyContent},</if>
+            <if test="requireContent != null and requireContent != ''">#{requireContent},</if>
+            <if test="benefits != null and benefits != ''">#{benefits},</if>
+            <if test="status != null">#{status},</if>
+            <if test="viewCount != null">#{viewCount},</if>
+            <if test="applyCount != null">#{applyCount},</if>
+            <if test="createdAt != null">#{createdAt},</if>
+            <if test="updatedAt != null">#{updatedAt},</if>
+            <if test="hasCount !=null"> #{hasCount},</if>
+            <if test="pendingAdjust !=null">#{pendingAdjust},</if>
+
+        </trim>
+    </insert>
+
+
+
+    <update id="updata" parameterType="com.itzk.SmartEmploymentPlatform.pojo.entryDTO.JobDTO">
+        UPDATE jobs
+        <set>
+            <if test="companyId != null">company_id = #{companyId},</if>
+            <if test="hrUserId != null">hr_user_id = #{hrUserId},</if>
+            <if test="title != null and title != ''">title = #{title},</if>
+            <if test="category != null and category != ''">category = #{category},</if>
+            <if test="salaryMin != null">salary_min = #{salaryMin},</if>
+            <if test="salaryMax != null">salary_max = #{salaryMax},</if>
+            <if test="city != null and city != ''">city = #{city},</if>
+            <if test="address != null and address != ''">address = #{address},</if>
+            <if test="experience != null and experience != ''">experience = #{experience},</if>
+            <if test="education != null">education = #{education},</if>
+            <if test="tags != null and tags != ''">tags = #{tags},</if>
+            <if test="jobSkills != null and jobSkills != ''">job_skills = #{jobSkills},</if>
+            <if test="headcount != null">headcount = headcount + #{headcount},</if>
+            <if test="dutyContent != null and dutyContent != ''">duty_content = #{dutyContent},</if>
+            <if test="requireContent != null and requireContent != ''">require_content = #{requireContent},</if>
+            <if test="benefits != null and benefits != ''">benefits = #{benefits},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="viewCount != null">view_count = #{viewCount},</if>
+            <if test="applyCount != null">apply_count = #{applyCount},</if>
+            <if test="updatedAt != null">updated_at = #{updatedAt},</if>
+            <if test="hasCount !=null">has_count = has_count + #{hasCount},</if>
+            <if test="pendingAdjust !=null">pending_adjust = #{pendingAdjust},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+
+    <!-- 删除 -->
+    <delete id="deleteJob">
+        DELETE FROM jobs WHERE id = #{id}
+    </delete>
+
+    <select id="selectAdminList" resultType="com.itzk.SmartEmploymentPlatform.pojo.vo.AdminJobVO">
+        SELECT j.id, j.title, j.company_id AS companyId,
+               c.name AS companyName,
+               j.category, j.salary_min AS salaryMin, j.salary_max AS salaryMax,
+               j.city, j.address, j.experience, j.education, j.status,
+               j.tags, j.job_skills AS jobSkills, j.headcount,
+               COALESCE(j.has_count, 0) AS hasCount,
+               COALESCE(j.pending_adjust, 0) AS pendingAdjust,
+               j.duty_content AS dutyContent, j.require_content AS requireContent,
+               j.benefits, j.view_count AS viewCount,
+               COALESCE(j.apply_count, 0) AS applyCount,
+               DATE_FORMAT(j.created_at, '%Y-%m-%d %H:%i:%s') AS createdAt,
+               DATE_FORMAT(j.updated_at, '%Y-%m-%d %H:%i:%s') AS updatedAt
+        FROM jobs j
+        LEFT JOIN companies c ON j.company_id = c.id
+        WHERE 1=1
+        <if test="title != null and title != ''">
+            AND j.title LIKE CONCAT('%', #{title}, '%')
+        </if>
+        <if test="companyName != null and companyName != ''">
+            AND c.name LIKE CONCAT('%', #{companyName}, '%')
+        </if>
+        <if test="status != null">
+            AND j.status = #{status}
+        </if>
+        ORDER BY j.status ASC, j.updated_at DESC
+    </select>
+
+</mapper>

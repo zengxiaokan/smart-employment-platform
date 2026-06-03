@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.itzk.SmartEmploymentPlatform.mapper.MatchRecordMapper">
+
+    <insert id="insert" parameterType="com.itzk.SmartEmploymentPlatform.pojo.entry.MatchRecord"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO match_records (job_id, resume_id, total_score, skill_score,
+                                   experience_score, education_score, salary_score,
+                                   match_summary, status, created_at)
+        VALUES (#{jobId}, #{resumeId}, #{totalScore}, #{skillScore},
+                #{experienceScore}, #{educationScore}, #{salaryScore},
+                #{matchSummary}, #{status}, NOW())
+    </insert>
+
+    <select id="selectByJobId" resultType="com.itzk.SmartEmploymentPlatform.pojo.entry.MatchRecord">
+        SELECT id, job_id, resume_id, total_score, skill_score,
+               experience_score, education_score, salary_score,
+               match_summary, status, created_at
+        FROM match_records
+        WHERE job_id = #{jobId}
+        ORDER BY total_score DESC
+    </select>
+
+    <select id="selectVOByJobId" resultType="com.itzk.SmartEmploymentPlatform.pojo.vo.MatchVO">
+        SELECT a.id              AS applicationId,
+               r.id              AS resumeId,
+               r.user_id         AS userId,
+               r.name            AS name,
+               r.character_avatar AS avatar,
+               r.max_education   AS maxEducation,
+               mr.id             AS matchId,
+               mr.total_score    AS totalScore,
+               mr.skill_score    AS skillScore,
+               mr.experience_score AS experienceScore,
+               mr.education_score AS educationScore,
+               mr.salary_score   AS salaryScore,
+               mr.match_summary  AS matchSummary,
+               mr.status         AS status
+        FROM applications a
+        INNER JOIN resumes r ON a.resume_id = r.id
+        LEFT JOIN match_records mr ON mr.job_id = a.job_id AND mr.resume_id = a.resume_id
+        WHERE a.job_id = #{jobId}
+        ORDER BY mr.total_score DESC, a.applied_at DESC
+    </select>
+
+    <select id="selectById" resultType="com.itzk.SmartEmploymentPlatform.pojo.entry.MatchRecord">
+        SELECT id, job_id, resume_id, total_score, skill_score,
+               experience_score, education_score, salary_score,
+               match_summary, status, created_at
+        FROM match_records
+        WHERE id = #{id}
+    </select>
+
+    <update id="updateSummary">
+        UPDATE match_records SET match_summary = #{summary} WHERE id = #{id}
+    </update>
+
+</mapper>

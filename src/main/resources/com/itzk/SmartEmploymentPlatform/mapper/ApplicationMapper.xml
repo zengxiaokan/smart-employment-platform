@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.itzk.SmartEmploymentPlatform.mapper.ApplicationMapper">
+    <insert id="insertApply" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO applications
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            job_id,
+            resume_id,
+            user_id,
+            company_id,
+            status,
+            <if test="interviewTime != null">interview_time,</if>
+            <if test="hrRemark != null">hr_remark,</if>
+            applied_at,
+            <if test="viewedAt != null">viewed_at,</if>
+            updated_at,
+            <if test="operatorId != null">operator_id,</if>
+        </trim>
+        <trim prefix="VALUES (" suffix=")" suffixOverrides=",">
+            #{jobId},
+            #{resumeId},
+            #{userId},
+            #{companyId},
+            #{status},
+            <if test="interviewTime != null">#{interviewTime},</if>
+            <if test="hrRemark != null">#{hrRemark},</if>
+            #{appliedAt},
+            <if test="viewedAt != null">#{viewedAt},</if>
+            #{updatedAt},
+            <if test="operatorId != null"> #{operatorId}</if>
+        </trim>
+    </insert>
+    <update id="updata" parameterType="com.itzk.SmartEmploymentPlatform.pojo.entry.Application">
+        update applications
+        <set>
+            <if test="jobId != null">job_id = #{jobId},</if>
+            <if test="resumeId != null">resume_id = #{resumeId},</if>
+            <if test="userId != null">user_id = #{userId},</if>
+            <if test="companyId != null">company_id = #{companyId},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="interviewTime != null">interview_time = #{interviewTime},</if>
+            <if test="hrRemark != null">hr_remark = #{hrRemark},</if>
+            <if test="appliedAt != null">applied_at = #{appliedAt},</if>
+            <if test="viewedAt != null">viewed_at = #{viewedAt},</if>
+            <if test="operatorId != null">operator_id = #{operatorId},</if>
+            updated_at = now()
+        </set>
+        where id = #{id}
+    </update>
+
+    <select id="getByUserId" resultType="com.itzk.SmartEmploymentPlatform.pojo.vo.SimpleApplicationVo">
+        SELECT
+            a.id,
+            a.applied_at,
+            a.viewed_at,
+            a.updated_at,
+            a.status,
+            a.interview_time,
+            j.title      AS job_title,
+            c.name       AS company_name,
+            u.nickname   AS applicant_name,
+            r.resume_name          -- 注意：开发版 resumes 表字段名为 resume_name
+        FROM applications a
+                 LEFT JOIN jobs j      ON a.job_id = j.id
+                 LEFT JOIN companies c ON j.company_id = c.id
+                 LEFT JOIN resumes r   ON a.resume_id = r.id
+                 LEFT JOIN users u     ON a.user_id = u.id   -- 关键：这里是 user_id，不是 applicant_id
+        WHERE a.user_id = #{userId}
+        ORDER BY a.applied_at DESC
+
+    </select>
+    <select id="getJobAndCompanyInfo"
+            resultType="com.itzk.SmartEmploymentPlatform.pojo.vo.ApplicationDitailVo">
+        SELECT
+            -- ================== 职位信息 ==================
+            j.title,
+            j.category,
+            j.salary_min AS salaryMin,
+            j.salary_max AS salaryMax,
+            j.experience,
+            j.education,
+            j.tags,
+            j.headcount,
+            j.duty_content AS dutyContent,
+            j.require_content AS requireContent,
+            j.benefits,
+            j.status As jobStatus,
+            j.view_count AS viewCount,
+            j.apply_count AS applyCount,
+            j.hr_user_id As hrId,
+
+            -- ================== 公司信息 ==================
+            c.name,
+            c.description,
+            c.industry,
+            c.size,
+            c.city,
+            c.address,
+            c.logo_url AS logoUrl,
+            -- ================== ✅ 你要的 3 个新字段 ==================
+            a.applied_at     AS appliedAt,     <!-- 投递时间 -->
+            a.interview_time AS interviewTime, <!-- 面试时间 -->
+            a.status         As applicationStatus,
+            a.operator_id    As operatorId,
+            u.realname      AS realName      <!-- 真实姓名（从 user 表） -->
+
+        FROM applications a
+                 INNER JOIN jobs j ON a.job_id = j.id
+                 INNER JOIN companies c ON j.company_id = c.id
+                 LEFT JOIN  users u    ON a.user_id = u.id  <!-- 关联用户表拿真实姓名 -->
+
+        WHERE a.id = #{applicationId}
+    </select>
+    <select id="getCompanyApply" resultType="com.itzk.SmartEmploymentPlatform.pojo.vo.ApplicationHrVO">
+        with a as (
+            select * from applications
+            where company_id = #{query.companyId}
+        )
+        select
+             a.id
+             ,j.id as jobId
+             ,a.resume_id as resumeId
+             ,a.user_id as userId
+             ,a.status
+             ,a.interview_time as interviewTime
+             ,a.hr_remark as hrRemark
+             ,a.applied_at as appliedAt
+             ,a.viewed_at as viewedAt
+             ,j.title as jobTitle
+             ,u.realname as applicantName
+        from a
+                 inner join users as u on a.user_id = u.id
+                 inner join jobs as j on a.job_id = j.id
+        where 1=1
+        <if test="query.applicantName != null and query.applicantName != ''">
+            and u.realname like concat('%', #{query.applicantName}, '%')
+        </if>
+        <if test="query.jobTitle != null and query.jobTitle != ''">
+            and j.title like concat('%', #{query.jobTitle}, '%')
+        </if>
+        <if test="query.status != null">
+            and a.status = #{query.status}
+        </if>
+
+    </select>
+
+    <select id="selectAdminList" resultType="com.itzk.SmartEmploymentPlatform.pojo.vo.AdminApplicationVO">
+        SELECT a.id, a.status,
+               u.realname AS applicantName,
+               j.title AS jobTitle,
+               c.name AS companyName,
+               DATE_FORMAT(a.applied_at, '%Y-%m-%d %H:%i:%s') AS appliedAt,
+               DATE_FORMAT(a.updated_at, '%Y-%m-%d %H:%i:%s') AS updatedAt
+        FROM applications a
+        LEFT JOIN users u ON a.user_id = u.id
+        LEFT JOIN jobs j ON a.job_id = j.id
+        LEFT JOIN companies c ON a.company_id = c.id
+        WHERE 1=1
+        <if test="applicantName != null and applicantName != ''">
+            AND u.realname LIKE CONCAT('%', #{applicantName}, '%')
+        </if>
+        <if test="jobTitle != null and jobTitle != ''">
+            AND j.title LIKE CONCAT('%', #{jobTitle}, '%')
+        </if>
+        <if test="status != null">
+            AND a.status = #{status}
+        </if>
+        ORDER BY a.applied_at DESC
+    </select>
+
+</mapper>

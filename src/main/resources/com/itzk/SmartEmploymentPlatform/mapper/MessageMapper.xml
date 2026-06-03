@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.itzk.SmartEmploymentPlatform.mapper.MessageMapper">
+
+    <!-- 插入新消息，使用自增主键 -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO messages (conversation_id, sender_id, receiver_id, content, msg_type, is_read, sent_at)
+        VALUES (#{conversationId}, #{senderId}, #{receiverId}, #{content}, #{msgType}, #{isRead}, NOW())
+    </insert>
+
+    <!-- 按会话 ID 查询历史消息，按时间正序（旧消息在前），
+         不返回 receiver_id 以减少前端暴露 -->
+    <select id="selectByConversationId" resultType="com.itzk.SmartEmploymentPlatform.pojo.vo.MessageVO">
+        SELECT id, conversation_id, sender_id, content, msg_type, is_read, sent_at
+        FROM messages
+        WHERE conversation_id = #{conversationId}
+        ORDER BY sent_at ASC
+    </select>
+
+    <!-- 查询系统通知列表（管理员查看自己发布的公告） -->
+    <select id="selectAnnouncements" resultType="com.itzk.SmartEmploymentPlatform.pojo.entry.Message">
+        SELECT id, conversation_id, sender_id, receiver_id, content, msg_type, is_read, sent_at
+        FROM messages
+        WHERE msg_type = 1 AND sender_id = #{senderId}
+        ORDER BY sent_at DESC
+    </select>
+
+    <!-- 查询当前用户每个会话中最新的未读消息（用于登录后批量推送） -->
+    <select id="selectLatestUnreadByReceiver" resultType="com.itzk.SmartEmploymentPlatform.pojo.entry.Message">
+        SELECT m.id, m.conversation_id, m.sender_id, m.receiver_id, m.content, m.msg_type, m.is_read, m.sent_at
+        FROM messages m
+        WHERE m.receiver_id = #{receiverId}
+          AND m.is_read = 0
+          AND m.sent_at = (
+            SELECT MAX(m2.sent_at)
+            FROM messages m2
+            WHERE m2.conversation_id = m.conversation_id
+              AND m2.receiver_id = #{receiverId}
+              AND m2.is_read = 0
+          )
+        ORDER BY m.sent_at ASC
+    </select>
+
+    <!-- 查询最新 N 条系统通知（用户端），置顶的优先显示 -->
+    <select id="selectLatestAnnouncements" resultType="com.itzk.SmartEmploymentPlatform.pojo.entry.Message">
+        SELECT id, conversation_id, sender_id, receiver_id, content, msg_type, is_read, sent_at
+        FROM messages
+        WHERE msg_type = 1
+        ORDER BY (CASE WHEN JSON_EXTRACT(content, '$.pinned') = CAST('true' AS JSON) THEN 0 ELSE 1 END), sent_at DESC
+        LIMIT #{limit}
+    </select>
+
+</mapper>

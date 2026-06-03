@@ -1,0 +1,81 @@
+# ============================================================
+# 智能就业服务平台 - 配置文件模板
+# ============================================================
+# 使用方法：
+#   1. 复制本文件为 application.yaml（注意：application.yaml 已被 .gitignore 屏蔽，不会被提交）
+#        cp application.yaml.example application.yaml
+#   2. 把下面所有 <your-xxx> 占位符替换为真实值
+#   3. 启动项目即可
+# ============================================================
+
+spring:
+  application:
+    name: smart-employment-platform
+
+  # ========== MySQL 数据源 ==========
+  datasource:
+    # 数据库连接 URL（库名 recruitment_db 需要先手动创建）
+    url: jdbc:mysql://<your-db-host>:<your-db-port>/<your-db-name>?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: <your-db-username>          # 一般为 root
+    password: <your-db-password>          # 例：123456
+
+  # ========== Redis 配置 ==========
+  data:
+    redis:
+      host: <your-redis-host>             # 例：1.2.6.77（你的 Ubuntu 服务器 IP）
+      port: 6379                          # Redis 默认端口
+      password: <your-redis-password>      # 例：123
+      database: 0                         # 使用第 0 个库（默认）
+      timeout: 3000ms
+      connect-timeout: 3000ms
+      lettuce:
+        pool:
+          enabled: true
+
+  # ========== 文件上传限制 ==========
+  servlet:
+    multipart:
+      max-file-size: 10MB                 # 单文件最大
+      max-request-size: 100MB             # 单请求最大
+
+# ========== Web 服务配置 ==========
+server:
+  port: 8080
+  address: 127.0.0.1
+
+# ========== 日志配置 ==========
+logging:
+  level:
+    org.springframework.jdbc.support.JdbcTransactionManager: debug
+
+# ========== MyBatis 配置 ==========
+mybatis:
+  mapper-locations: classpath:com/itzk/SmartEmploymentPlatform/mapper/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+# ========== JWT 配置 ==========
+# secret 必须是 32 位以上的随机字符串（生产环境务必替换）
+jwt:
+  secret: <your-jwt-secret-at-least-32-characters-long>
+  expire: 43200000                        # Token 有效期（毫秒），默认 12 小时
+
+# ========== 阿里云 OSS 配置 ==========
+# 用于简历附件上传与 PDF 预览
+# AccessKey/SecretKey 建议通过环境变量注入，不要写在配置里
+aliyun:
+  oss:
+    endpoint: <your-oss-endpoint>         # 例：https://oss-cn-beijing.aliyuncs.com
+    bucketName: <your-bucket-name>        # 例：java--itzk
+    region: <your-oss-region>             # 例：cn-beijing
+
+# ========== MiniMax AI 配置 ==========
+# 用于 AI 简历优化、职位匹配摘要
+# 申请地址：https://api.minimax.chat
+minimax:
+  api:
+    url: https://api.minimax.chat/v1/chat/completions
+    key: <your-minimax-api-key>           # 形如 sk-cp-xxxxx
+    model: <your-model-name>              # 例：MiniMax-M2.7

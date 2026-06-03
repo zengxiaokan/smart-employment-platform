@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.itzk.SmartEmploymentPlatform.mapper.InterviewMapper">
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO interview
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            application_id,
+            company_id,
+            job_id,
+            user_id,
+            hr_user_id,
+            interview_time,
+            interview_location,
+            location_type,
+            <if test="contactPerson != null">contact_person,</if>
+            <if test="contactPhone != null">contact_phone,</if>
+            <if test="remark != null">remark,</if>
+            status,
+            <if test="candidateRemark != null">candidate_remark,</if>
+            <if test="responseTime != null">response_time,</if>
+            created_at,
+            updated_at,
+        </trim>
+        <trim prefix="VALUES (" suffix=")" suffixOverrides=",">
+            #{applicationId},
+            #{companyId},
+            #{jobId},
+            #{userId},
+            #{hrUserId},
+            #{interviewTime},
+            #{interviewLocation},
+            #{locationType},
+            <if test="contactPerson != null">#{contactPerson},</if>
+            <if test="contactPhone != null">#{contactPhone},</if>
+            <if test="remark != null">#{remark},</if>
+            #{status},
+            <if test="candidateRemark != null">#{candidateRemark},</if>
+            <if test="responseTime != null">#{responseTime},</if>
+            now(),
+            now(),
+        </trim>
+    </insert>
+
+    <select id="select"
+            parameterType="com.itzk.SmartEmploymentPlatform.pojo.entry.Interview"
+            resultType="com.itzk.SmartEmploymentPlatform.pojo.vo.InterviewVo">
+        SELECT
+        id,
+        application_id AS applicationId,
+        company_id AS companyId,
+        job_id AS jobId,
+        user_id AS userId,
+        hr_user_id AS hrUserId,
+        interview_time AS interviewTime,
+        interview_location AS interviewLocation,
+        location_type AS locationType,
+        contact_person AS contactPerson,
+        contact_phone AS contactPhone,
+        remark,
+        status,
+        candidate_remark AS candidateRemark,
+        response_time AS responseTime,
+        created_at AS createdAt,
+        updated_at AS updatedAt
+        FROM interviews
+        <where>
+            <if test="companyId != null">AND company_id = #{companyId}</if>
+            <if test="jobId != null">AND job_id = #{jobId}</if>
+            <if test="userId != null">AND user_id = #{userId}</if>
+            <if test="hrUserId != null">AND hr_user_id = #{hrUserId}</if>
+            <if test="status != null">AND status = #{status}</if>
+            <if test="locationType != null">AND location_type = #{locationType}</if>
+            <if test="contactPerson != null and contactPerson != ''">
+                AND contact_person LIKE CONCAT('%', #{contactPerson}, '%')
+            </if>
+            <!-- 注意：这里 interviewTime 只能做精确匹配，如需范围请用 Map 或加参数 -->
+            <if test="interviewTime != null">AND interview_time &gt;= #{interviewTime}</if>
+        </where>
+        ORDER BY interview_time ASC, id DESC
+    </select>
+    <select id="getAllCompanyInterview" resultType="com.itzk.SmartEmploymentPlatform.pojo.vo.InterviewVo"
+            parameterType="com.itzk.SmartEmploymentPlatform.pojo.entry.Interview">
+
+            SELECT
+            filtered.id,
+            filtered.application_id AS applicationId,
+            filtered.company_id AS companyId,
+            filtered.job_id AS jobId,
+            filtered.user_id AS userId,
+            filtered.hr_user_id AS hrUserId,
+            filtered.interview_time AS interviewTime,
+            filtered.interview_location AS interviewLocation,
+            filtered.location_type AS locationType,
+            filtered.contact_person AS contactPerson,
+            filtered.contact_phone AS contactPhone,
+            filtered.remark,
+            filtered.status,
+            filtered.candidate_remark AS candidateRemark,
+            filtered.response_time AS responseTime,
+            filtered.created_at AS createdAt,
+            filtered.updated_at AS updatedAt,
+            u.realname AS userName,
+            j.title AS jobTitle,
+            u.avatar_url AS  avatarUrl
+            FROM (
+            SELECT *
+            FROM interview
+            <where>
+                <if test="companyId != null">
+                    AND company_id = #{companyId}
+                </if>
+                <if test="jobId != null">
+                    AND job_id = #{jobId}
+                </if>
+                <if test="userId != null">
+                    AND user_id = #{userId}
+                </if>
+                <if test="hrUserId != null">
+                    AND hr_user_id = #{hrUserId}
+                </if>
+                <if test="status != null">
+                    AND status = #{status}
+                </if>
+                <if test="locationType != null">
+                    AND location_type = #{locationType}
+                </if>
+                <if test="contactPerson != null and contactPerson != ''">
+                    AND contact_person LIKE CONCAT('%', #{contactPerson}, '%')
+                </if>
+                <if test="interviewTime != null">
+                    AND interview_time &gt;= #{interviewTime}
+                </if>
+            </where>
+            ORDER BY interview_time ASC, id DESC
+            <!-- 可加 LIMIT 如果需要分页，但这里不分页 -->
+            ) filtered
+            INNER JOIN users u ON filtered.user_id = u.id
+            INNER JOIN jobs j ON filtered.job_id = j.id
+            ORDER BY filtered.interview_time ASC, filtered.id DESC
+    </select>
+
+    <!-- 更新面试状态 -->
+    <update id="updateStatus">
+        UPDATE interview SET status = #{status}, updated_at = NOW() WHERE id = #{id}
+    </update>
+
+    <update id="updata" parameterType="com.itzk.SmartEmploymentPlatform.pojo.entry.Interview">
+        UPDATE interview
+        <set>
+            <if test="applicationId != null">application_id = #{applicationId},</if>
+            <if test="companyId != null">company_id = #{companyId},</if>
+            <if test="jobId != null">job_id = #{jobId},</if>
+            <if test="userId != null">user_id = #{userId},</if>
+            <if test="hrUserId != null">hr_user_id = #{hrUserId},</if>
+            <if test="interviewTime != null">interview_time = #{interviewTime},</if>
+            <if test="interviewLocation != null">interview_location = #{interviewLocation},</if>
+            <if test="locationType != null">location_type = #{locationType},</if>
+            <if test="contactPerson != null">contact_person = #{contactPerson},</if>
+            <if test="contactPhone != null">contact_phone = #{contactPhone},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="candidateRemark != null">candidate_remark = #{candidateRemark},</if>
+            <if test="responseTime != null">response_time = #{responseTime},</if>
+            <if test="createdAt != null">created_at = #{createdAt},</if>
+            updated_at = NOW()
+        </set>
+        WHERE id = #{id}
+    </update>
+
+</mapper>

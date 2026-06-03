@@ -1,0 +1,39 @@
+# ==================== 敏感配置 ====================
+deploy/
+deploy/.env
+.env
+*.env.local
+*.env.production
+
+# 内部文档 / 部署脚本 / AI 协作笔记（不进公开仓库）
+docs/
+sql/
+
+# 本地/生产配置（含真实密钥，不进仓库）
+# application.yaml.example 以 .example 结尾，不会匹配下面规则
+# 测试配置 application-test.yaml 保留在仓库，方便 reviewer 运行测试
+src/main/resources/application*.yaml
+!src/test/resources/application-test.yaml
+
+# ==================== 编译产物 ====================
+target/
+dist/
+*.class
+*.jar
+*.war
+
+# ==================== IDE ====================
+.idea/
+*.iml
+.vscode/
+.project
+.classpath
+.settings/
+
+# ==================== 日志 ====================
+logs/
+*.log
+
+# ==================== OS ====================
+Thumbs.db
+.DS_Store
