@@ -44,3 +44,8 @@ Thumbs.db
 # application.yaml.example 不会匹配（后缀是 .example）
 backend/src/main/resources/application*.yaml
 !backend/src/test/resources/application-test.yaml
+
+# ==================== SQL 草稿 / 笔记 ====================
+# 误放进源码目录的 SQL 草稿，不进仓库
+backend/src/main/resources/sql简化.txt
+frontend/src/消息表.txt
