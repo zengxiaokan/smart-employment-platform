@@ -125,8 +125,15 @@ smart-employment-platform/
 │   ├── application-docker.yaml   # Docker 部署配置
 │   ├── com/.../mapper/*.xml       # MyBatis XML
 │   └── static/ / templates/       # 静态资源 / 模板
+├── docs/              # 📚 项目文档（公开）
+│   └── 招聘系统数据库设计文档.md   # 数据库表结构设计说明
+├── sql/               # 数据库迁移脚本（Flyway）
 └── src/test/                       # 单元测试
 ```
+
+## 📚 文档
+
+- [招聘系统数据库设计文档](docs/招聘系统数据库设计文档.md) — 23 张表的字段、约束、关系说明
 
 ## 🚀 快速开始
 
