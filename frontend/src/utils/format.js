@@ -7,6 +7,13 @@ export function parseSkills(skillsStr) {
   return [];
 }
 
+export function parseTags(tags) {
+  if (!tags) return [];
+  if (Array.isArray(tags)) return tags;
+  if (typeof tags === 'string') return tags.split(',').map(t => t.trim()).filter(t => t);
+  return [];
+}
+
 export function formatSkills(skillsArr) {
   if (!skillsArr) return '';
   if (typeof skillsArr === 'string') return skillsArr;
@@ -31,9 +38,12 @@ export function formatSalary(min, max) {
   return fmtMin + '-' + fmtMax
 }
 
-export function maxEducationLabel(v) {
-  const map = { 0: '初中', 1: '高中', 2: '中专', 3: '大专', 4: '本科', 5: '硕士', 6: '博士' }
-  return map[v] ?? '-'
+export function fmtSalaryShort(min, max) {
+  if (!min && !max) return '面议';
+  const f = (v) => Math.round(v / 1000) + 'K';
+  if (!min) return f(max) + '及以下';
+  if (!max) return f(min) + '及以上';
+  return f(min) + '-' + f(max);
 }
 
 export function educationLabel(v) {

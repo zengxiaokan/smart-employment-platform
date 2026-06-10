@@ -184,7 +184,7 @@ import { List, OfficeBuilding, Clock, Loading, User, Bell, View, ChatDotRound } 
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useRouter } from 'vue-router'
 import { getJobApplicationsApi, cancelApplyApi, reApplyApi, getApplicationDetailApi } from '@/api/user/profile'
-import { formatSalary } from '@/utils/format'
+import { formatSalary, parseTags } from '@/utils/format'
 
 const router = useRouter()
 const list = ref([])
@@ -228,11 +228,6 @@ const statusMap = {
   4: { label: '已取消', type: 'danger' },
   5: { label: '已录用', type: 'success' },
   6: { label: '二次投递', type: 'info' },
-}
-
-const parseTags = (str) => {
-  if (!str) return []
-  return str.split(',').filter(t => t.trim())
 }
 
 const currentStatusLabel = computed(() => {

@@ -45,7 +45,7 @@
           <i>·</i>
           <span v-if="r.totalWorkYears != null">{{ r.totalWorkYears }}年</span>
           <i v-if="r.totalWorkYears != null">·</i>
-          <span v-if="r.maxEducation != null">{{ maxEducationLabel(r.maxEducation) }}</span>
+          <span v-if="r.maxEducation != null">{{ educationLabel(r.maxEducation) }}</span>
           <i v-if="r.maxEducation != null">·</i>
           <span>{{ r.phone || '未填写' }}</span>
           <i>·</i>
@@ -89,7 +89,7 @@
               <span>{{ educationLabel(currentResume.education) }}</span>
               <span v-if="currentResume.graduationSchool">{{ currentResume.graduationSchool }}</span>
               <span v-if="currentResume.totalWorkYears != null">{{ currentResume.totalWorkYears }}年</span>
-              <span v-if="currentResume.maxEducation != null">{{ maxEducationLabel(currentResume.maxEducation) }}</span>
+              <span v-if="currentResume.maxEducation != null">{{ educationLabel(currentResume.maxEducation) }}</span>
               <span>{{ currentResume.phone }}</span>
               <span>{{ currentResume.email }}</span>
             </div>
@@ -131,7 +131,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getResumeList, getResumeDetail, exportResumePdf, optimizeResume } from '@/api/user/resume'
-import { parseSkills, maxEducationLabel, educationLabel } from '@/utils/format'
+import { parseSkills, educationLabel } from '@/utils/format'
 
 const router = useRouter()
 const loading = ref(true)

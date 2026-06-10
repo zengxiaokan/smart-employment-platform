@@ -202,30 +202,7 @@
       <ChatPanel compact :target-conversation-id="targetConversationId" />
     </el-dialog>
 
-    <el-dialog
-      v-model="reportVisible"
-      title="举报职位"
-      width="460px"
-      :close-on-click-modal="false"
-    >
-      <p style="margin-bottom: 12px; color: #606266">
-        举报职位：<strong>{{ currentItem?.job?.title }}</strong>
-      </p>
-      <el-input
-        v-model="reportReason"
-        type="textarea"
-        :rows="4"
-        maxlength="300"
-        show-word-limit
-        placeholder="请详细描述举报原因..."
-      />
-      <template #footer>
-        <el-button @click="reportVisible = false">取消</el-button>
-        <el-button type="danger" :loading="reportSubmitting" @click="doReport"
-          >提交举报</el-button
-        >
-      </template>
-    </el-dialog>
+    <ReportDialog v-model:visible="reportVisible" :target-type="1" :target-id="currentItem?.job?.id" :target-name="currentItem?.job?.title || ''" label="职位" />
   </div>
 </template>
 
@@ -243,10 +220,10 @@ import { ElMessage } from "element-plus";
 import { getFavoriteJobs, applyJob } from "@/api/user/job";
 import { getResumeList } from "@/api/user/resume";
 import { useRouter } from "vue-router";
-import { jobEducationLabel, formatSalary } from "@/utils/format";
+import { jobEducationLabel, formatSalary, parseTags } from "@/utils/format";
 import { createConversation } from "@/api/chat";
-import { submitFeedback } from "@/api/feedbacks";
 import ChatPanel from "@/components/ChatPanel.vue";
+import ReportDialog from "@/components/ReportDialog.vue";
 
 const router = useRouter();
 const loading = ref(true);
@@ -264,44 +241,9 @@ const targetConversationId = ref(null);
 
 // ==================== 举报 ====================
 const reportVisible = ref(false);
-const reportReason = ref("");
-const reportSubmitting = ref(false);
 
 const handleReport = () => {
-  reportReason.value = "";
   reportVisible.value = true;
-};
-
-const doReport = async () => {
-  if (!reportReason.value.trim()) {
-    ElMessage.warning("请填写举报原因");
-    return;
-  }
-  reportSubmitting.value = true;
-  try {
-    await submitFeedback({
-      type: 3,
-      title: `举报职位：${currentItem.value?.job?.title || ""}`,
-      content: reportReason.value,
-      targetType: 1,
-      targetId: currentItem.value?.job?.id
-        ? Number(currentItem.value.job.id)
-        : null,
-    });
-    ElMessage.success("举报已提交");
-    reportVisible.value = false;
-  } catch {
-    /* */
-  } finally {
-    reportSubmitting.value = false;
-  }
-};
-
-const parseTags = (tags) => {
-  if (!tags) return [];
-  if (Array.isArray(tags)) return tags;
-  if (typeof tags === "string") return tags.split(",").filter((t) => t.trim());
-  return [];
 };
 
 const selectJob = (item) => {
@@ -312,13 +254,22 @@ const selectJob = (item) => {
 
 const handleChat = async () => {
   if (!currentItem.value?.job) return;
+  const hrUserId = currentItem.value.job.hrUserId;
+  if (!hrUserId) {
+    ElMessage.warning("该职位暂无HR信息");
+    return;
+  }
   try {
-    const res = await createConversation(currentItem.value.job.hrUserId);
+    const res = await createConversation(hrUserId);
     if (res.code === 1 && res.data) {
       targetConversationId.value = res.data.id;
+      chatVisible.value = true;
+    } else {
+      ElMessage.error(res.msg || "创建会话失败");
     }
-  } catch {}
-  chatVisible.value = true;
+  } catch {
+    ElMessage.error("网络异常，创建会话失败");
+  }
 };
 
 const handleApply = async () => {

@@ -1,1 +1,0 @@
-import{t as e}from"./request-DhF4GGYh.js";function t(t){return e({url:`/user/company/list`,method:`get`,params:t})}function n(){return e({url:`/user/company/filters`,method:`get`})}function r(t){return e({url:`/user/company/detail/${t}`,method:`get`})}function i(t,n){return e({url:`/user/company/${t}/jobs`,method:`get`,params:n})}export{t as i,n,i as r,r as t};

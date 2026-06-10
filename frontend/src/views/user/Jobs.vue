@@ -9,7 +9,7 @@ import {
   recordBrowse,
 } from "@/api/user/job";
 import { getResumeList } from "@/api/user/resume";
-import { parseSkills, formatSalary } from "@/utils/format";
+import { parseSkills, formatSalary, parseTags, jobEducationLabel } from "@/utils/format";
 import { ElMessage } from "element-plus";
 import {
   MapLocation,
@@ -24,7 +24,7 @@ import {
 import ChatPanel from "@/components/ChatPanel.vue";
 import CompanyDetail from "./CompanyDetail.vue";
 import { createConversation } from "@/api/chat";
-import { submitFeedback } from "@/api/feedbacks";
+import ReportDialog from "@/components/ReportDialog.vue";
 
 const route = useRoute();
 const router = useRouter();
@@ -61,13 +61,22 @@ const openChatDialog = async () => {
     ElMessage.warning("请先选择一个职位");
     return;
   }
+  if (!currentJob.value.hrUserId) {
+    ElMessage.warning("该职位缺少HR信息，无法发起沟通");
+    return;
+  }
   try {
     const res = await createConversation(currentJob.value.hrUserId);
     if (res.code === 1 && res.data) {
       targetConversationId.value = res.data.id;
+      chatDialogVisible.value = true;
+    } else {
+      ElMessage.error(res.msg || "创建会话失败");
+      return;
     }
-  } catch {}
-  chatDialogVisible.value = true;
+  } catch {
+    ElMessage.error("网络异常，无法创建会话");
+  }
 };
 
 // ==================== 公司详情弹窗 ====================
@@ -134,38 +143,10 @@ const goToCreateResume = () => {
 };
 
 const reportVisible = ref(false);
-const reportReason = ref("");
-const reportSubmitting = ref(false);
 
 const handleReport = () => {
   if (!activeItem.value) return;
-  reportReason.value = "";
   reportVisible.value = true;
-};
-
-const doReport = async () => {
-  if (!reportReason.value.trim()) {
-    ElMessage.warning("请填写举报原因");
-    return;
-  }
-  if (!activeItem.value) return;
-  const job = activeItem.value.job;
-  reportSubmitting.value = true;
-  try {
-    await submitFeedback({
-      type: 3,
-      title: `举报职位：${job.title}`,
-      content: reportReason.value,
-      targetType: 1,
-      targetId: job.id,
-    });
-    ElMessage.success("举报已提交");
-    reportVisible.value = false;
-  } catch {
-    /* */
-  } finally {
-    reportSubmitting.value = false;
-  }
 };
 
 const toggleFavorite = async () => {
@@ -192,31 +173,6 @@ const toggleFavorite = async () => {
   } catch (error) {
     ElMessage.error(isFav ? "取消收藏失败" : "收藏失败");
   }
-};
-
-// 学历映射
-const formatEducation = (level) => {
-  const map = {
-    0: "不限",
-    1: "初中",
-    2: "高中",
-    3: "中专",
-    4: "大专",
-    5: "本科",
-    6: "硕士",
-    7: "博士",
-  };
-  return map[level] || "不限";
-};
-
-// 标签转换
-const parseTags = (tags) => {
-  if (!tags) return [];
-  if (Array.isArray(tags)) return tags;
-  if (typeof tags === "string") {
-    return tags.split(",").filter((t) => t.trim() !== "");
-  }
-  return [];
 };
 
 // 3. 获取数据逻辑
@@ -365,7 +321,7 @@ onMounted(() => {
               >
               <span
                 ><el-icon><Reading /></el-icon>
-                {{ formatEducation(currentJob.education) }}</span
+                {{ jobEducationLabel(currentJob.education) }}</span
               >
             </div>
           </div>
@@ -603,30 +559,7 @@ onMounted(() => {
       />
     </el-dialog>
 
-    <el-dialog
-      v-model="reportVisible"
-      title="举报职位"
-      width="460px"
-      :close-on-click-modal="false"
-    >
-      <p style="margin-bottom: 12px; color: #606266">
-        举报职位：<strong>{{ activeItem?.job?.title }}</strong>
-      </p>
-      <el-input
-        v-model="reportReason"
-        type="textarea"
-        :rows="4"
-        maxlength="300"
-        show-word-limit
-        placeholder="请详细描述举报原因..."
-      />
-      <template #footer>
-        <el-button @click="reportVisible = false">取消</el-button>
-        <el-button type="danger" :loading="reportSubmitting" @click="doReport"
-          >提交举报</el-button
-        >
-      </template>
-    </el-dialog>
+    <ReportDialog v-model:visible="reportVisible" :target-type="1" :target-id="activeItem?.job?.id" :target-name="activeItem?.job?.title || ''" label="职位" />
   </div>
 </template>
 

@@ -33,6 +33,9 @@ public interface CompanyMapper {
     @Select("Select * from companies where id = #{id}")
     Company getById(Long id);
 
+    @Select("<script>SELECT * FROM companies WHERE id IN <foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach></script>")
+    List<Company> selectByIds(@Param("ids") java.util.Set<Long> ids);
+
 
     void insert(Company company);
 

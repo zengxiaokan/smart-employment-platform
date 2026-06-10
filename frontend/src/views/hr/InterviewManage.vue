@@ -171,7 +171,7 @@
                 >{{ currentResume.totalWorkYears }}年</span
               >
               <span v-if="currentResume.maxEducation != null">{{
-                maxEducationLabel(currentResume.maxEducation)
+                educationLabel(currentResume.maxEducation)
               }}</span>
               <span>{{ phoneLabel(currentResume.phone) }}</span>
               <span>{{ currentResume.email || "-" }}</span>
@@ -451,7 +451,7 @@ import {
   getInterviewDetail,
 } from "@/api/hr/interview";
 import { getResumeByApplication } from "@/api/hr/resume";
-import { maxEducationLabel, educationLabel } from "@/utils/format";
+import { educationLabel } from "@/utils/format";
 
 const route = useRoute();
 

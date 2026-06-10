@@ -2,7 +2,6 @@ package com.itzk.SmartEmploymentPlatform.service;
 
 import com.itzk.SmartEmploymentPlatform.pojo.PageResult;
 import com.itzk.SmartEmploymentPlatform.pojo.Result;
-import com.itzk.SmartEmploymentPlatform.pojo.entry.Job;
 import com.itzk.SmartEmploymentPlatform.pojo.entryDTO.JobDTO;
 import com.itzk.SmartEmploymentPlatform.pojo.entryDTO.JobFavor;
 import com.itzk.SmartEmploymentPlatform.pojo.entryDTO.JobQueryDTO;
@@ -47,5 +46,5 @@ public interface JobsService {
     Result addJob(@Valid JobDTO job);
 
     /** 热门岗位：按投递数+浏览量排序 */
-    Result<List<Job>> getHotJobs(int limit);
+    Result<List<JobRecommendVO>> getHotJobs(int limit);
 }

@@ -101,14 +101,7 @@
         background
       />
     </div>
-    <el-dialog v-model="reportVisible" title="举报公司" width="460px" :close-on-click-modal="false">
-      <p style="margin-bottom:12px;color:#606266">举报公司：<strong>{{ reportTarget?.name }}</strong></p>
-      <el-input v-model="reportReason" type="textarea" :rows="4" maxlength="300" show-word-limit placeholder="请详细描述举报原因..." />
-      <template #footer>
-        <el-button @click="reportVisible = false">取消</el-button>
-        <el-button type="danger" :loading="reportSubmitting" @click="doReport">提交举报</el-button>
-      </template>
-    </el-dialog>
+    <ReportDialog v-model:visible="reportVisible" :target-type="2" :target-id="reportTarget?.id" :target-name="reportTarget?.name || ''" label="公司" />
   </div>
 </template>
 
@@ -117,8 +110,8 @@ import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { Search, WarningFilled } from "@element-plus/icons-vue";
 import { getCompanyList, getCompanyFilters } from "@/api/user/company";
-import { submitFeedback } from "@/api/feedbacks";
 import { ElMessage } from "element-plus";
+import ReportDialog from "@/components/ReportDialog.vue";
 
 const router = useRouter();
 
@@ -146,30 +139,10 @@ const handleCompanyClick = (company) => {
 // ==================== 举报 ====================
 const reportVisible = ref(false);
 const reportTarget = ref(null);
-const reportReason = ref('');
-const reportSubmitting = ref(false);
 
 const handleReport = (company) => {
   reportTarget.value = company;
-  reportReason.value = '';
   reportVisible.value = true;
-};
-
-const doReport = async () => {
-  if (!reportReason.value.trim()) { ElMessage.warning('请填写举报原因'); return; }
-  reportSubmitting.value = true;
-  try {
-    await submitFeedback({
-      type: 3,
-      title: `举报公司：${reportTarget.value?.name || ''}`,
-      content: reportReason.value,
-      targetType: 2,
-      targetId: reportTarget.value?.id ? Number(reportTarget.value.id) : null
-    });
-    ElMessage.success('举报已提交');
-    reportVisible.value = false;
-  } catch { /* */ }
-  finally { reportSubmitting.value = false; }
 };
 
 const fetchFilters = async () => {

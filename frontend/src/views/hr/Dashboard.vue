@@ -166,7 +166,7 @@
                 >{{ currentResume.totalWorkYears }}年</span
               >
               <span v-if="currentResume.maxEducation != null">{{
-                maxEducationLabel(currentResume.maxEducation)
+                educationLabel(currentResume.maxEducation)
               }}</span>
               <span>{{ currentResume.phone }}</span>
               <span>{{ currentResume.email }}</span>
@@ -188,7 +188,7 @@
           <h4>技能标签</h4>
           <div class="rd-tags">
             <el-tag
-              v-for="s in parseSkillsArr(currentResume.skills)"
+              v-for="s in parseSkills(currentResume.skills)"
               :key="s"
               size="small"
               >{{ s }}</el-tag
@@ -278,8 +278,8 @@ import { getDashboard, getAllTodos } from "@/api/hr/dashboard";
 import { getResumeByApplication } from "@/api/hr/resume";
 import {
   formatSalary,
-  maxEducationLabel,
   educationLabel,
+  parseSkills,
 } from "@/utils/format";
 
 const router = useRouter();
@@ -326,12 +326,6 @@ const relativeTime = (dateStr) => {
   const days = Math.floor(hours / 24);
   if (days < 30) return `${days}天前`;
   return dateStr.substring(0, 10);
-};
-
-const parseSkillsArr = (skills) => {
-  if (!skills) return [];
-  if (Array.isArray(skills)) return skills;
-  return skills.split(",").filter(Boolean);
 };
 
 onMounted(async () => {

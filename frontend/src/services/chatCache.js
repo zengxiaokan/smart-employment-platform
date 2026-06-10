@@ -48,6 +48,16 @@ export function appendMessage(convId, msg) {
   return false
 }
 
+export function addConversationToCache(conv) {
+  if (!conv) return
+  if (!conversations) conversations = []
+  const exists = conversations.some(c => c.id === conv.id)
+  if (!exists) {
+    conversations.unshift(conv)
+    recomputeUnread()
+  }
+}
+
 export function clearChatCache() {
   conversations = null
   conversationsFetched = false

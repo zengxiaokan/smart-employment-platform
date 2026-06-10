@@ -365,6 +365,9 @@ public class JobsServiceImpl implements JobsService {
             Collections.shuffle(result);
         }
 
+        // 批量填充公司名称
+        fillCompanyNames(result);
+
         return Result.success(result);
     }
 
@@ -378,7 +381,21 @@ public class JobsServiceImpl implements JobsService {
             list.add(vo);
         }
         Collections.shuffle(list);
+        fillCompanyNames(list);
         return Result.success(list);
+    }
+
+    /** 批量填充公司名称到 VO 列表 */
+    private void fillCompanyNames(List<JobRecommendVO> list) {
+        Set<Long> companyIds = list.stream()
+                .map(v -> v.getJob().getCompanyId())
+                .filter(id -> id != null)
+                .collect(Collectors.toSet());
+        if (companyIds.isEmpty()) return;
+        Map<Long, String> nameMap = companyMapper.selectByIds(companyIds).stream()
+                .collect(Collectors.toMap(Company::getId,
+                        c -> c.getName() != null ? c.getName() : ""));
+        list.forEach(vo -> vo.setCompanyName(nameMap.getOrDefault(vo.getJob().getCompanyId(), "")));
     }
 
     @Override
@@ -507,26 +524,39 @@ public class JobsServiceImpl implements JobsService {
      * Redis 缓存 15 分钟，key = jobs:hot:{limit}，所有用户共享
      */
     @Override
-    public Result<List<Job>> getHotJobs(int limit) {
+    public Result<List<JobRecommendVO>> getHotJobs(int limit) {
         String cacheKey = RedisKeyConstants.JOBS_HOT_CACHE_PREFIX + limit;
+        List<Job> jobs = null;
         try {
             String cached = stringRedisTemplate.opsForValue().get(cacheKey);
             if (cached != null) {
-                return Result.success(JSON.parseArray(cached, Job.class));
+                jobs = JSON.parseArray(cached, Job.class);
             }
         } catch (Exception e) {
             log.warn("Redis 读取热门岗位缓存失败，降级查 DB: {}", e.getMessage());
         }
-        List<Job> jobs = jobsMapper.getHotJobs(limit);
-        if (jobs != null && !jobs.isEmpty()) {
-            try {
-                stringRedisTemplate.opsForValue().set(cacheKey, JSON.toJSONString(jobs),
-                        RedisKeyConstants.JOBS_CACHE_TTL_MINUTES, TimeUnit.MINUTES);
-            } catch (Exception e) {
-                log.warn("Redis 写入热门岗位缓存失败: {}", e.getMessage());
+        if (jobs == null) {
+            jobs = jobsMapper.getHotJobs(limit);
+            if (jobs != null && !jobs.isEmpty()) {
+                try {
+                    stringRedisTemplate.opsForValue().set(cacheKey, JSON.toJSONString(jobs),
+                            RedisKeyConstants.JOBS_CACHE_TTL_MINUTES, TimeUnit.MINUTES);
+                } catch (Exception e) {
+                    log.warn("Redis 写入热门岗位缓存失败: {}", e.getMessage());
+                }
             }
         }
-        return Result.success(jobs);
+        List<JobRecommendVO> result = new ArrayList<>();
+        if (jobs != null) {
+            for (Job job : jobs) {
+                JobRecommendVO vo = new JobRecommendVO();
+                vo.setJob(job);
+                vo.setMatchScore(0);
+                result.add(vo);
+            }
+        }
+        fillCompanyNames(result);
+        return Result.success(result);
     }
 
     /**

@@ -353,9 +353,11 @@ const handleLogin = async () => {
       }
       if (!target) { ElMessage.error("未知身份"); return; }
       localStorage.setItem("loginUser", JSON.stringify(res.data));
-      resetHrStatus(); // 重置状态，确保登录后重新检测企业审核状态
+      resetHrStatus();
       ElMessage.success("登录成功");
-      await router.replace(target);
+      loading.value = false;
+      router.replace(target);
+      return;
     } else { ElMessage.error(res.msg || "登录失败"); }
   } catch { ElMessage.error("网络异常"); }
   finally { loading.value = false; }

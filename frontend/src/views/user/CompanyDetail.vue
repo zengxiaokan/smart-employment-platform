@@ -57,7 +57,7 @@
                 job.experience
               }}</el-tag>
               <el-tag size="small" v-if="job.education !== undefined">{{
-                formatEducation(job.education)
+                jobEducationLabel(job.education)
               }}</el-tag>
               <el-tag
                 v-for="skill in parseSkills(job.jobSkills)"
@@ -108,7 +108,7 @@
               currentJob.experience
             }}</el-tag>
             <el-tag size="small" v-if="currentJob.education !== undefined">{{
-              formatEducation(currentJob.education)
+              jobEducationLabel(currentJob.education)
             }}</el-tag>
             <el-tag size="small">{{ currentJob.category }}</el-tag>
             <el-tag
@@ -183,33 +183,7 @@
       </template>
     </el-dialog>
 
-    <el-dialog
-      v-model="jobReportVisible"
-      title="举报职位"
-      width="460px"
-      :close-on-click-modal="false"
-    >
-      <p style="margin-bottom: 12px; color: #606266">
-        举报职位：<strong>{{ currentJob?.title }}</strong>
-      </p>
-      <el-input
-        v-model="jobReportReason"
-        type="textarea"
-        :rows="4"
-        maxlength="300"
-        show-word-limit
-        placeholder="请详细描述举报原因..."
-      />
-      <template #footer>
-        <el-button @click="jobReportVisible = false">取消</el-button>
-        <el-button
-          type="danger"
-          :loading="jobReportSubmitting"
-          @click="doReportJob"
-          >提交举报</el-button
-        >
-      </template>
-    </el-dialog>
+    <ReportDialog v-model:visible="jobReportVisible" :target-type="1" :target-id="currentJob?.id" :target-name="currentJob?.title || ''" label="职位" />
 
     <el-dialog v-model="applyDialogVisible" title="选择简历投递" width="500px">
       <div class="apply-dialog-content">
@@ -274,33 +248,7 @@
       </div>
     </el-dialog>
 
-    <el-dialog
-      v-model="reportVisible"
-      title="举报公司"
-      width="460px"
-      :close-on-click-modal="false"
-    >
-      <p style="margin-bottom: 12px; color: #606266">
-        举报公司：<strong>{{ companyDetail?.name }}</strong>
-      </p>
-      <el-input
-        v-model="reportReason"
-        type="textarea"
-        :rows="4"
-        maxlength="300"
-        show-word-limit
-        placeholder="请详细描述举报原因..."
-      />
-      <template #footer>
-        <el-button @click="reportVisible = false">取消</el-button>
-        <el-button
-          type="danger"
-          :loading="reportSubmitting"
-          @click="doReportCompany"
-          >提交举报</el-button
-        >
-      </template>
-    </el-dialog>
+    <ReportDialog v-model:visible="reportVisible" :target-type="2" :target-id="companyDetail?.id" :target-name="companyDetail?.name || ''" label="公司" />
   </div>
 </template>
 
@@ -316,11 +264,11 @@ import {
 import { getCompanyDetail, getCompanyJobs } from "@/api/user/company";
 import { applyJob } from "@/api/user/job";
 import { getResumeList } from "@/api/user/resume";
-import { parseSkills, formatSalary } from "@/utils/format";
+import { parseSkills, formatSalary, parseTags, jobEducationLabel } from "@/utils/format";
 import { ElMessage } from "element-plus";
 import ChatPanel from "@/components/ChatPanel.vue";
 import { createConversation } from "@/api/chat";
-import { submitFeedback } from "@/api/feedbacks";
+import ReportDialog from "@/components/ReportDialog.vue";
 
 const props = defineProps({
   companyId: {
@@ -359,68 +307,14 @@ const selectedResumeId = ref(null);
 const resumeList = ref([]);
 
 const reportVisible = ref(false);
-const reportReason = ref("");
-const reportSubmitting = ref(false);
+const jobReportVisible = ref(false);
 
 const handleReportCompany = () => {
-  reportReason.value = "";
   reportVisible.value = true;
 };
 
-// ==================== 职位举报 ====================
-const jobReportVisible = ref(false);
-const jobReportReason = ref("");
-const jobReportSubmitting = ref(false);
-
 const handleReportJob = () => {
-  jobReportReason.value = "";
   jobReportVisible.value = true;
-};
-
-const doReportJob = async () => {
-  if (!jobReportReason.value.trim()) {
-    ElMessage.warning("请填写举报原因");
-    return;
-  }
-  jobReportSubmitting.value = true;
-  try {
-    await submitFeedback({
-      type: 3,
-      title: `举报职位：${currentJob.value?.title || ""}`,
-      content: jobReportReason.value,
-      targetType: 1,
-      targetId: currentJob.value?.id ? Number(currentJob.value.id) : null,
-    });
-    ElMessage.success("举报已提交");
-    jobReportVisible.value = false;
-  } catch {
-    /* */
-  } finally {
-    jobReportSubmitting.value = false;
-  }
-};
-
-const doReportCompany = async () => {
-  if (!reportReason.value.trim()) {
-    ElMessage.warning("请填写举报原因");
-    return;
-  }
-  reportSubmitting.value = true;
-  try {
-    await submitFeedback({
-      type: 3,
-      title: `举报公司：${companyDetail.value?.name || ""}`,
-      content: reportReason.value,
-      targetType: 2,
-      targetId: companyId.value ? Number(companyId.value) : null,
-    });
-    ElMessage.success("举报已提交");
-    reportVisible.value = false;
-  } catch {
-    /* */
-  } finally {
-    reportSubmitting.value = false;
-  }
 };
 
 const chatDialogVisible = ref(false);
@@ -489,13 +383,22 @@ const openChatDialog = async () => {
     ElMessage.warning("请先选择一个职位");
     return;
   }
+  if (!currentJob.value.hrUserId) {
+    ElMessage.warning("该职位缺少HR信息，无法发起沟通");
+    return;
+  }
   try {
     const res = await createConversation(currentJob.value.hrUserId);
     if (res.code === 1 && res.data) {
       targetConversationId.value = res.data.id;
+      chatDialogVisible.value = true;
+    } else {
+      ElMessage.error(res.msg || "创建会话失败");
+      return;
     }
-  } catch {}
-  chatDialogVisible.value = true;
+  } catch {
+    ElMessage.error("网络异常，无法创建会话");
+  }
 };
 
 const fetchCompanyDetail = async () => {
@@ -544,28 +447,6 @@ const loadMore = async () => {
   }
 };
 
-const formatEducation = (level) => {
-  const map = {
-    0: "不限",
-    1: "初中",
-    2: "高中",
-    3: "中专",
-    4: "大专",
-    5: "本科",
-    6: "硕士",
-    7: "博士",
-  };
-  return map[level] || "不限";
-};
-
-const parseTags = (tags) => {
-  if (!tags) return [];
-  if (Array.isArray(tags)) return tags;
-  if (typeof tags === "string") {
-    return tags.split(",").filter((t) => t.trim() !== "");
-  }
-  return [];
-};
 
 const formatDate = (dateStr) => {
   if (!dateStr) return "";

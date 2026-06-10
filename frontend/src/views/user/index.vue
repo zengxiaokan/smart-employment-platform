@@ -173,7 +173,7 @@
           :key="(item.job || item).id"
           class="job-card reveal-item"
           :style="{ transitionDelay: `${Math.min(index, 5) * 70}ms` }"
-          @click="openJobDetail(item.job || item)"
+          @click="openJobDetail(item.job || item, item.companyName || '')"
         >
           <div class="job-card-top">
             <div
@@ -211,6 +211,7 @@
                 )
               }}
             </span>
+            <span class="job-company-name" v-if="item.companyName" @click.stop="goToCompanyDetail((item.job || item).companyId)">{{ item.companyName }}</span>
             <span class="job-stats-mini">
               <el-icon><View /></el-icon
               >{{ (item.job || item).viewCount || 0 }}
@@ -223,27 +224,27 @@
 
       <div v-if="activeTab === 'hot'" class="jobs-grid">
         <div
-          v-for="(job, index) in hotJobs"
-          :key="job.id"
+          v-for="(item, index) in hotJobs"
+          :key="(item.job || item).id"
           class="job-card reveal-item"
           :style="{ transitionDelay: `${Math.min(index, 5) * 70}ms` }"
-          @click="openJobDetail(job)"
+          @click="openJobDetail(item.job || item, item.companyName || '')"
         >
           <div class="job-card-top">
             <div class="job-card-badge hot-badge">HOT</div>
             <span class="job-arrow">Trending</span>
           </div>
-          <h4 class="job-card-title">{{ job.title }}</h4>
+          <h4 class="job-card-title">{{ (item.job || item).title }}</h4>
           <div class="job-card-meta">
             <span
-              ><el-icon><MapLocation /></el-icon>{{ job.city }}</span
+              ><el-icon><MapLocation /></el-icon>{{ (item.job || item).city }}</span
             >
-            <span>{{ job.experience || "经验不限" }}</span>
-            <span>{{ jobEducationLabel(job.education) }}</span>
+            <span>{{ (item.job || item).experience || "经验不限" }}</span>
+            <span>{{ jobEducationLabel((item.job || item).education) }}</span>
           </div>
-          <div class="job-card-tags" v-if="job.jobSkills">
+          <div class="job-card-tags" v-if="(item.job || item).jobSkills">
             <span
-              v-for="s in parseSkills(job.jobSkills)"
+              v-for="s in parseSkills((item.job || item).jobSkills)"
               :key="s"
               class="job-tag"
               >{{ s }}</span
@@ -251,11 +252,12 @@
           </div>
           <div class="job-card-footer">
             <span class="job-salary">{{
-              formatSalary(job.salaryMin, job.salaryMax)
+              formatSalary((item.job || item).salaryMin, (item.job || item).salaryMax)
             }}</span>
+            <span class="job-company-name" v-if="item.companyName" @click.stop="goToCompanyDetail((item.job || item).companyId)">{{ item.companyName }}</span>
             <span class="job-stats-mini">
-              <el-icon><View /></el-icon>{{ job.viewCount || 0 }}
-              <el-icon><ChatDotRound /></el-icon>{{ job.applyCount || 0 }}
+              <el-icon><View /></el-icon>{{ (item.job || item).viewCount || 0 }}
+              <el-icon><ChatDotRound /></el-icon>{{ (item.job || item).applyCount || 0 }}
             </span>
           </div>
         </div>
@@ -375,6 +377,11 @@
               detailJob.category
             }}</el-tag>
           </div>
+        </div>
+        <div class="detail-company" v-if="detailCompanyName" @click="goToCompanyDetail(detailJob.companyId)">
+          <el-icon><OfficeBuilding /></el-icon>
+          <span>{{ detailCompanyName }}</span>
+          <el-icon class="company-arrow"><ArrowRight /></el-icon>
         </div>
         <el-divider />
         <div class="detail-section" v-if="detailJob.dutyContent">
@@ -517,12 +524,13 @@ import {
   ArrowRight,
   TrendCharts,
   Monitor,
+  OfficeBuilding,
 } from "@element-plus/icons-vue";
 import { ElMessage } from "element-plus";
 import { getRecommendedJobs, applyJob, getHotJobs } from "@/api/user/job";
 import { getHomeStats } from "@/api/user/user";
 import { getResumeList } from "@/api/user/resume";
-import { parseSkills, formatSalary, jobEducationLabel } from "@/utils/format";
+import { parseSkills, formatSalary, jobEducationLabel, parseTags } from "@/utils/format";
 import ChatPanel from "@/components/ChatPanel.vue";
 import { createConversation } from "@/api/chat";
 
@@ -533,6 +541,7 @@ const recommendedJobs = ref([]);
 const hotJobs = ref([]);
 const detailVisible = ref(false);
 const detailJob = ref(null);
+const detailCompanyName = ref("");
 const chatVisible = ref(false);
 const targetConversationId = ref(null);
 const applyVisible = ref(false);
@@ -569,14 +578,6 @@ const fetchHomeStats = async () => {
   }
 };
 
-const parseTags = (tags) => {
-  if (!tags) return [];
-  if (Array.isArray(tags)) return tags;
-  if (typeof tags === "string")
-    return tags.split(",").filter((t) => t.trim() !== "");
-  return [];
-};
-
 const getMatchClass = (score) => {
   if (score >= 80) return "match-high";
   if (score >= 50) return "match-mid";
@@ -611,9 +612,19 @@ const fetchHotJobs = async () => {
   }
 };
 
-const openJobDetail = (job) => {
+const openJobDetail = (job, companyName = "") => {
   detailJob.value = job;
+  detailCompanyName.value = companyName;
   detailVisible.value = true;
+};
+
+const goToCompanyDetail = (companyId) => {
+  if (!companyId) {
+    ElMessage.warning("暂无公司信息");
+    return;
+  }
+  detailVisible.value = false;
+  router.push(`/user/company/${companyId}`);
 };
 
 const scrollToJobs = () => {
@@ -627,11 +638,21 @@ const goToJobsPage = () => {
 
 const openChatFromDetail = async () => {
   if (!detailJob.value) return;
+  if (!detailJob.value.hrUserId) {
+    ElMessage.warning("该职位缺少HR信息，无法发起沟通");
+    return;
+  }
   try {
     const res = await createConversation(detailJob.value.hrUserId);
-    if (res.code === 1 && res.data) targetConversationId.value = res.data.id;
-  } catch {}
-  chatVisible.value = true;
+    if (res.code === 1 && res.data) {
+      targetConversationId.value = res.data.id;
+      chatVisible.value = true;
+    } else {
+      ElMessage.error(res.msg || "创建会话失败");
+    }
+  } catch {
+    ElMessage.error("网络异常，无法创建会话");
+  }
 };
 
 const openApplyFromDetail = async () => {
@@ -1370,19 +1391,42 @@ onUnmounted(() => {
 }
 
 .job-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding-top: 16px;
   border-top: 1px solid rgba(226, 232, 240, 0.9);
+  gap: 12px;
 }
 
 .job-salary {
   font-size: 20px;
   font-weight: 900;
   color: #ef4444;
+  flex-shrink: 0;
+}
+
+.job-company-name {
+  font-size: 13px;
+  color: #3b82f6;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color 0.2s;
+}
+.job-company-name:hover {
+  color: #1d4ed8;
+  text-decoration: underline;
 }
 
 .job-stats-mini {
   color: #94a3b8;
   font-size: 12px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .jobs-view-all {

@@ -258,7 +258,7 @@ import {
   cancelFavorite,
   updateFavoriteReason,
 } from "@/api/hr/talent";
-import { educationLabel, parseSkills } from "@/utils/format";
+import { educationLabel, parseSkills, fmtSalaryShort } from "@/utils/format";
 
 const loading = ref(false);
 const searched = ref(false);
@@ -278,14 +278,6 @@ const unfavoriteTarget = ref(null);
 
 const parseSkillList = (skills) => {
   return parseSkills(skills);
-};
-
-const fmtSalaryShort = (min, max) => {
-  if (!min && !max) return "面议";
-  const fmt = (v) => Math.round(v / 1000) + "K";
-  if (!min) return fmt(max) + "及以下";
-  if (!max) return fmt(min) + "及以上";
-  return fmt(min) + "-" + fmt(max);
 };
 
 const filteredList = computed(() => {

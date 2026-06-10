@@ -30,29 +30,31 @@
           </div>
         </template>
       </div>
-      <div
-        v-for="contact in contactList"
-        :key="contact.id"
-        class="contact-item"
-        :class="{ active: currentContact?.id === contact.id }"
-        @click="selectContact(contact)"
-      >
-        <el-badge :is-dot="contact.unread > 0">
-          <el-avatar :size="40" :src="contact.avatar" />
-        </el-badge>
-        <div class="contact-info">
-          <div class="contact-name">{{ contact.name }}</div>
-          <div class="contact-preview">{{ contact.lastMessage }}</div>
+      <div class="contact-scroll">
+        <div
+          v-for="contact in contactList"
+          :key="contact.id"
+          class="contact-item"
+          :class="{ active: currentContact?.id === contact.id }"
+          @click="selectContact(contact)"
+        >
+          <el-badge :is-dot="contact.unread > 0">
+            <el-avatar :size="40" :src="contact.avatar" />
+          </el-badge>
+          <div class="contact-info">
+            <div class="contact-name">{{ contact.name }}</div>
+            <div class="contact-preview">{{ contact.lastMessage }}</div>
+          </div>
+          <span class="contact-time">{{ contact.time }}</span>
+          <el-button
+            class="contact-delete-btn"
+            :icon="Delete"
+            size="small"
+            text
+            @click.stop="handleDeleteConversation(contact)"
+            title="删除会话"
+          />
         </div>
-        <span class="contact-time">{{ contact.time }}</span>
-        <el-button
-          class="contact-delete-btn"
-          :icon="Delete"
-          size="small"
-          text
-          @click.stop="handleDeleteConversation(contact)"
-          title="删除会话"
-        />
       </div>
     </div>
 
@@ -153,7 +155,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { WarningFilled, Bell, Refresh, Plus, Delete, ArrowDown, ArrowRight } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getMessages, getConversations, createConversation, deleteConversation } from '@/api/chat'
@@ -529,12 +531,29 @@ const refreshAll = async () => {
   }
 }
 
-const trySelectTarget = () => {
+const trySelectTarget = async () => {
   if (props.targetConversationId && !currentContact.value) {
-    const conv = contactList.value.find(c => c.id === props.targetConversationId)
+    let conv = contactList.value.find(c => c.id === props.targetConversationId)
+    if (!conv) {
+      await refreshAll()
+      conv = contactList.value.find(c => c.id === props.targetConversationId)
+    }
     if (conv) selectContact(conv)
   }
 }
+
+watch(() => props.targetConversationId, async (newId) => {
+  if (!newId) return
+  if (currentContact.value?.id === newId) return
+  const existing = contactList.value.find(c => c.id === newId)
+  if (existing) {
+    selectContact(existing)
+    return
+  }
+  await refreshAll()
+  const found = contactList.value.find(c => c.id === newId)
+  if (found) selectContact(found)
+})
 
 onMounted(async () => {
   getStompClient()
@@ -574,8 +593,9 @@ onUnmounted(() => {
 .chat-panel.compact { height: 450px; }
 
 .contact-list { width: 280px; border-right: 1px solid #f0f2f5; display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; }
-.list-header { padding: 16px; font-weight: 600; font-size: 15px; border-bottom: 1px solid #f0f2f5; display: flex; align-items: center; gap: 8px; }
+.list-header { padding: 16px; font-weight: 600; font-size: 15px; border-bottom: 1px solid #f0f2f5; display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .list-header .el-button { margin-left: auto; }
+.contact-scroll { flex: 1; overflow-y: auto; min-height: 0; }
 .contact-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; cursor: pointer; transition: background 0.2s; }
 .contact-item:hover, .contact-item.active { background: #f0f5ff; }
 .contact-info { flex: 1; overflow: hidden; }

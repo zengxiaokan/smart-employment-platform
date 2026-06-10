@@ -156,7 +156,7 @@
                 >{{ currentResume.totalWorkYears }}年</span
               >
               <span v-if="currentResume.maxEducation != null">{{
-                maxEducationLabel(currentResume.maxEducation)
+                educationLabel(currentResume.maxEducation)
               }}</span>
               <span>{{ currentResume.phone }}</span>
               <span>{{ currentResume.email }}</span>
@@ -178,7 +178,7 @@
           <h4>技能标签</h4>
           <div class="rd-tags">
             <el-tag
-              v-for="s in parseSkillsArr(currentResume.skills)"
+              v-for="s in parseSkills(currentResume.skills)"
               :key="s"
               size="small"
               >{{ s }}</el-tag
@@ -352,8 +352,8 @@ import {
 } from "@/api/hr/interview";
 import {
   formatSalary,
-  maxEducationLabel,
   educationLabel,
+  parseSkills,
 } from "@/utils/format";
 
 const router = useRouter();
@@ -414,12 +414,6 @@ const statusTagType = (v) => {
       v
     ] || "info"
   );
-};
-
-const parseSkillsArr = (skills) => {
-  if (!skills) return [];
-  if (Array.isArray(skills)) return skills;
-  return skills.split(",").filter(Boolean);
 };
 
 const tabCounts = computed(() => ({

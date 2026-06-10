@@ -189,7 +189,7 @@
                 <span>{{ educationLabel(currentResume.education) }}</span>
                 <span v-if="currentResume.graduationSchool">{{ currentResume.graduationSchool }}</span>
                 <span v-if="currentResume.totalWorkYears != null">{{ currentResume.totalWorkYears }}年</span>
-                <span v-if="currentResume.maxEducation != null">{{ maxEducationLabel(currentResume.maxEducation) }}</span>
+                <span v-if="currentResume.maxEducation != null">{{ educationLabel(currentResume.maxEducation) }}</span>
                 <span>{{ currentResume.phone }}</span>
                 <span>{{ currentResume.email || '-' }}</span>
               </div>
@@ -201,7 +201,7 @@
           </div>
           <div class="rd-row" v-if="currentResume.skills">
             <span class="rd-label">技能标签</span>
-            <span><el-tag v-for="s in parseSkillsArr(currentResume.skills)" :key="s" size="small">{{ s }}</el-tag></span>
+            <span><el-tag v-for="s in parseSkills(currentResume.skills)" :key="s" size="small">{{ s }}</el-tag></span>
           </div>
           <div class="rd-row" v-if="currentResume.selfDescription">
             <span class="rd-label">自我描述</span>
@@ -327,7 +327,7 @@ import { Refresh, MagicStick, Briefcase, User, Star, Trophy, Loading } from '@el
 import { getMatchJobs, getMatchList, getMatchDetail, refreshMatchSummary } from '@/api/hr/match'
 import { getResumeDetail } from '@/api/hr/resume'
 import { createInterviewInvitation, getInterviewByJobAndUser } from '@/api/hr/interview'
-import { maxEducationLabel, educationLabel } from '@/utils/format'
+import { educationLabel, parseSkills } from '@/utils/format'
 
 const jobLoading = ref(false)
 const jobs = ref([])
@@ -419,12 +419,6 @@ const parseSkillList = (skills) => {
   if (!skills) return []
   if (Array.isArray(skills)) return skills
   return skills.split(/[,，、]/).filter(Boolean).map(s => s.trim())
-}
-
-const parseSkillsArr = (skills) => {
-  if (!skills) return []
-  if (Array.isArray(skills)) return skills
-  return skills.split(',').filter(Boolean)
 }
 
 const salaryShort = (min, max) => {
