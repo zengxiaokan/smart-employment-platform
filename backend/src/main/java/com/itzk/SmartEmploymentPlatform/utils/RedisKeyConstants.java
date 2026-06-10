@@ -18,6 +18,10 @@ public class RedisKeyConstants {
     // 投递冷却锁：key = apply:lock:用户ID:职位ID
     public static final String APPLY_LOCK_PREFIX = "apply:lock:";
 
+    // 公司重新申请冷却锁：key = company:reapply:lock:公司ID
+    // 防止 HR 短时间内反复 2→0→2→0 刷管理员,锁 24h
+    public static final String COMPANY_REAPPLY_LOCK_PREFIX = "company:reapply:lock:";
+
     //收藏冷却锁
     public static final String FavorJob_LOCK_PREFIX = "favorjob:lock:";
 

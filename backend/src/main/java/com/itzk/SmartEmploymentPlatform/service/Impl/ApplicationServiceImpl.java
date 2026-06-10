@@ -146,6 +146,7 @@ public class ApplicationServiceImpl implements ApplicationService {
      * @return
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public Result replyApplication(Long userId, Long applicationId) {
         // 防重复：已是再次投递状态则不允许重复操作
         Application exist = applicationMapper.getById(applicationId);

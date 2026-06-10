@@ -174,6 +174,7 @@ public class ChatServiceImpl implements ChatService {
      * 两步操作：先在 messages 表中标记 is_read，再清零 conversations 表中的未读计数。
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public List<MessageVO> getMessages(Long conversationId, Long userId) {
         // 标记消息已读
         messageMapper.markAsRead(conversationId, userId);

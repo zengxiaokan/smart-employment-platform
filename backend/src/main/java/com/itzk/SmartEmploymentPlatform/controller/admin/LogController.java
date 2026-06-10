@@ -5,11 +5,14 @@ import com.itzk.SmartEmploymentPlatform.pojo.PageResult;
 import com.itzk.SmartEmploymentPlatform.pojo.Result;
 import com.itzk.SmartEmploymentPlatform.pojo.vo.OperationLogVO;
 import com.itzk.SmartEmploymentPlatform.service.OperationLogService;
+import jakarta.validation.constraints.Min;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
+@Validated
 @RestController("adminLogController")
 @RequestMapping("/admin/logs")
 public class LogController {
@@ -18,8 +21,8 @@ public class LogController {
     private OperationLogService operationLogService;
 
     @GetMapping
-    public Result<PageResult> list(@RequestParam(defaultValue = "1") int page,
-                                   @RequestParam(defaultValue = "10") int size,
+    public Result<PageResult> list(@Min(1) @RequestParam(defaultValue = "1") int page,
+                                   @Min(1) @RequestParam(defaultValue = "10") int size,
                                    @RequestParam(required = false) Long userId,
                                    @RequestParam(required = false) String action,
                                    @RequestParam(required = false) String targetType,

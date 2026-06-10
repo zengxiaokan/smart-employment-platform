@@ -26,4 +26,7 @@ public interface CompanyService {
 
     //更新公司信息
     Result updata(Company company);
+
+    // 重新申请：把 auditStatus=2 改为 0,加 Redis 24h 锁防刷
+    Result reapply(Long companyId);
 }

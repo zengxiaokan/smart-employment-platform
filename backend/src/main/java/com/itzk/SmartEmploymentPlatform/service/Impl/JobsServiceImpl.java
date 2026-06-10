@@ -80,12 +80,12 @@ public class JobsServiceImpl implements JobsService {
         Set<Long> collectJobIdSet = getUserCollectJobIds(userId);
         Set<Long> collectAppJobIdSet = getUserSubmittedJobIds(userId);
 
-        // 组装带用户状态的 VO
+        // 组装带用户状态的 VO（跳过公司已删除的孤儿职位）
         List<JobsFavorite> voList = new ArrayList<>();
         for (Job job : pageData.jobs) {
             Company company = pageData.companyMap.get(job.getCompanyId());
             if (company == null) {
-                throw new RuntimeException("不合法数据");
+                continue;
             }
             SimpleCompanyVo companyVo = new SimpleCompanyVo();
             BeanUtils.copyProperties(company, companyVo);
@@ -572,12 +572,13 @@ public class JobsServiceImpl implements JobsService {
         Page<Job> page = jobsMapper.listJobs(jobQueryDTO);
         List<Job> jobList = page.getResult();
 
-        // 批量查公司，放入 Map 供后续组装
+        // 批量查公司，放入 Map 供后续组装（跳过已删除的公司）
         Map<Long, Company> companyMap = new HashMap<>();
         for (Job job : jobList) {
             Company company = companyMapper.getByJobId(job.getCompanyId());
             if (company == null) {
-                throw new RuntimeException("不合法数据");
+                log.warn("职位 {} 关联的公司不存在, companyId={}", job.getId(), job.getCompanyId());
+                continue;
             }
             companyMap.put(job.getCompanyId(), company);
         }

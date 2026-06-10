@@ -8,6 +8,7 @@ import com.itzk.SmartEmploymentPlatform.pojo.vo.MatchVO;
 import com.itzk.SmartEmploymentPlatform.pojo.vo.SkillDetailVO;
 import com.itzk.SmartEmploymentPlatform.service.MatchService;
 import com.itzk.SmartEmploymentPlatform.utils.Constant;
+import com.itzk.SmartEmploymentPlatform.utils.UserHolder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -113,13 +114,16 @@ public class MatchServiceImpl implements MatchService {
 
     @Override
     public List<MatchVO> listByJobId(Long jobId) {
+        // 校验岗位归属
+        Long companyId = UserHolder.getCompanyId();
+        Job job = jobsMapper.getCompanyIdByjobId(jobId);
+        if (job == null || !job.getCompanyId().equals(companyId)) {
+            return Collections.emptyList();  // 不是本公司的岗位，返回空列表
+        }
         // 首次访问：执行评分入库；再次访问：直接返回库数据
         List<MatchRecord> existing = matchRecordMapper.selectByJobId(jobId);
         if (existing.isEmpty()) {
-            Job job = jobsMapper.getCompanyIdByjobId(jobId);
-            if (job != null) {
-                matchOneJob(job);
-            }
+            matchOneJob(job);
         }
 
         List<MatchVO> list = matchRecordMapper.selectVOByJobId(jobId);
@@ -166,6 +170,10 @@ public class MatchServiceImpl implements MatchService {
 
         Resume resume = resumeMapper.getResumeById(record.getResumeId());
         Job job = jobsMapper.getCompanyIdByjobId(record.getJobId());
+        Long companyId = UserHolder.getCompanyId();
+        if (job == null || !job.getCompanyId().equals(companyId)) {
+            throw new RuntimeException("无权查看该匹配记录");
+        }
 
         MatchDetailVO vo = new MatchDetailVO();
         vo.setMatchId(record.getId());
@@ -200,16 +208,20 @@ public class MatchServiceImpl implements MatchService {
     }
 
     @Override
-    @Transactional
     public String regenerateSummary(Long matchId) {
         MatchRecord record = matchRecordMapper.selectById(matchId);
         if (record == null) {
             throw new RuntimeException("匹配记录不存在");
         }
         String summary = generateSummary(record);
-        matchRecordMapper.updateSummary(matchId, summary);
+        doUpdateSummary(matchId, summary);
         log.info("评语重新生成完成: matchId={}", matchId);
         return summary;
+    }
+
+    @Transactional
+    public void doUpdateSummary(Long matchId, String summary) {
+        matchRecordMapper.updateSummary(matchId, summary);
     }
 
     /**

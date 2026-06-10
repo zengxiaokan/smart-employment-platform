@@ -18,6 +18,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.validation.Valid;
+
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -49,16 +51,16 @@ public class ResumeController {
     @GetMapping("/detail/{id}")
     public Result<ResumeVO> getResumeDetail(@PathVariable Long id ) {
         log.info("查询简历详情: id={}", id);
-        ResumeVO vo = resumeService.getResumeDetail(id);
-        if (vo == null) {
+        Resume resume = resumeMapper.getResumeById(id);
+        if (resume == null || !resume.getUserId().equals(UserHolder.getUserId())) {
             return Result.error("简历不存在");
         }
-
+        ResumeVO vo = resumeService.getResumeDetail(id);
         return Result.success(vo);
     }
 
     @PostMapping("/save")
-    public Result<ResumeVO> saveResume(@RequestBody SaveResumeDTO saveDTO) {
+    public Result<ResumeVO> saveResume(@Valid @RequestBody SaveResumeDTO saveDTO) {
         Long userId = UserHolder.getUserId();
         saveDTO.setUserId(userId);
         log.info("保存简历: {}", saveDTO);
@@ -69,19 +71,26 @@ public class ResumeController {
     @DeleteMapping("/delete/{id}")
     public Result<Void> deleteResume(@PathVariable Long id) {
         log.info("删除简历: id={}", id);
+        Resume resume = resumeMapper.getResumeById(id);
+        if (resume == null || !resume.getUserId().equals(UserHolder.getUserId())) {
+            return Result.error("无权操作该简历");
+        }
         resumeService.deleteResume(id);
         return Result.success();
     }
 
     @PutMapping("/setDefault/{id}")
     public Result<Void> setDefaultResume(@PathVariable Long id) {
-
         log.info("设置默认简历: id={}", id);
+        Resume resume = resumeMapper.getResumeById(id);
+        if (resume == null || !resume.getUserId().equals(UserHolder.getUserId())) {
+            return Result.error("无权操作该简历");
+        }
         return resumeService.setDefaultResume(id);
     }
 
     @PostMapping("/optimize")
-    public Result<SaveResumeDTO> optimize(@RequestBody SaveResumeDTO dto) {
+    public Result<SaveResumeDTO> optimize(@Valid @RequestBody SaveResumeDTO dto) {
         log.info("AI优化简历: name={}", dto.getName());
         SaveResumeDTO optimized = resumeService.optimizeResume(dto);
         return Result.success(optimized);
@@ -104,7 +113,7 @@ public class ResumeController {
     }
 
     @PutMapping("/update")
-    public Result<ResumeVO> updateResume(@RequestBody SaveResumeDTO dto) {
+    public Result<ResumeVO> updateResume(@Valid @RequestBody SaveResumeDTO dto) {
         Long userId = UserHolder.getUserId();
         dto.setUserId(userId);
         log.info("更新简历(AI采纳): id={}, name={}", dto.getId(), dto.getName());
@@ -148,8 +157,14 @@ public class ResumeController {
      * 单独保存一条教育经历（新增或更新）
      */
     @PostMapping("/education")
-    public Result<ResumeEducation> saveEducation(@RequestBody ResumeEducation education) {
+    public Result<ResumeEducation> saveEducation(@Valid @RequestBody ResumeEducation education) {
         log.info("单独保存教育经历: resumeId={}, id={}", education.getResumeId(), education.getId());
+        if (education.getResumeId() != null) {
+            Resume owner = resumeMapper.getResumeById(education.getResumeId());
+            if (owner == null || !owner.getUserId().equals(UserHolder.getUserId())) {
+                return Result.error("无权操作该简历");
+            }
+        }
         ResumeEducation result = resumeService.saveEducation(education);
         return Result.success(result);
     }
@@ -168,8 +183,14 @@ public class ResumeController {
      * 单独保存一条工作经历（新增或更新）
      */
     @PostMapping("/experience")
-    public Result<ResumeExperience> saveExperience(@RequestBody ResumeExperience experience) {
+    public Result<ResumeExperience> saveExperience(@Valid @RequestBody ResumeExperience experience) {
         log.info("单独保存工作经历: resumeId={}, id={}", experience.getResumeId(), experience.getId());
+        if (experience.getResumeId() != null) {
+            Resume owner = resumeMapper.getResumeById(experience.getResumeId());
+            if (owner == null || !owner.getUserId().equals(UserHolder.getUserId())) {
+                return Result.error("无权操作该简历");
+            }
+        }
         ResumeExperience result = resumeService.saveExperience(experience);
         return Result.success(result);
     }
@@ -188,8 +209,14 @@ public class ResumeController {
      * 单独保存一条项目经历（新增或更新）
      */
     @PostMapping("/project")
-    public Result<ResumeProject> saveProject(@RequestBody ResumeProject project) {
+    public Result<ResumeProject> saveProject(@Valid @RequestBody ResumeProject project) {
         log.info("单独保存项目经历: resumeId={}, id={}", project.getResumeId(), project.getId());
+        if (project.getResumeId() != null) {
+            Resume owner = resumeMapper.getResumeById(project.getResumeId());
+            if (owner == null || !owner.getUserId().equals(UserHolder.getUserId())) {
+                return Result.error("无权操作该简历");
+            }
+        }
         ResumeProject result = resumeService.saveProject(project);
         return Result.success(result);
     }
@@ -209,7 +236,7 @@ public class ResumeController {
      * 前端jobType传中文标签（全职/兼职/实习/不限），后端自动转换为Integer
      */
     @PostMapping("/intention")
-    public Result<Void> saveJobIntention(@RequestBody Resume resume) {
+    public Result<Void> saveJobIntention(@Valid @RequestBody Resume resume) {
         Long userId = UserHolder.getUserId();
         resume.setUserId(userId);
         if (resume.getId() == null) {
@@ -224,7 +251,7 @@ public class ResumeController {
      * 单独保存简历基本信息（更新简历主表的基本字段）
      */
     @PostMapping("/basic")
-    public Result<Void> saveJobBasic(@RequestBody Map<String, Object> body) {
+    public Result<Void> saveJobBasic(@Valid @RequestBody Map<String, Object> body) {
         Long userId = UserHolder.getUserId();
         if (body.get("jobType") instanceof String) {
             body.put("jobType", Constant.JobType.fromLabel((String) body.get("jobType")));
@@ -235,6 +262,11 @@ public class ResumeController {
             Resume existing = resumeMapper.getDefaultByuserId(userId);
             if (existing != null) {
                 resume.setId(existing.getId());
+            }
+        } else {
+            Resume existing = resumeMapper.getResumeById(resume.getId());
+            if (existing == null || !existing.getUserId().equals(userId)) {
+                return Result.error("无权操作该简历");
             }
         }
         log.info("单独保存简历基本信息: id={}", resume.getId());

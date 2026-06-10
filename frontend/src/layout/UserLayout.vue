@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from "vue";
 import {
   Search,
   ArrowDown,
@@ -71,8 +71,36 @@ const handleCommand = (command) => {
   }
 };
 
+// 动态同步顶栏高度到 --nav-height
+let navResizeObserver = null;
+const onWindowResize = () => {
+  const navEl = document.querySelector(".top-nav");
+  if (!navEl) return;
+  const total = navEl.getBoundingClientRect().height;
+  const safe = Math.ceil(total) + 4; // 4px 缓冲
+  document.documentElement.style.setProperty("--nav-height", safe + "px");
+};
+
 onMounted(() => {
   initChat();
+  nextTick(() => {
+    const navEl = document.querySelector(".top-nav");
+    const innerEl = document.querySelector(".nav-content");
+    if (navEl && "ResizeObserver" in window) {
+      onWindowResize();
+      navResizeObserver = new ResizeObserver(onWindowResize);
+      navResizeObserver.observe(innerEl || navEl);
+      window.addEventListener("resize", onWindowResize);
+    }
+  });
+});
+
+onBeforeUnmount(() => {
+  if (navResizeObserver) {
+    navResizeObserver.disconnect();
+    navResizeObserver = null;
+  }
+  window.removeEventListener("resize", onWindowResize);
 });
 </script>
 
@@ -250,10 +278,7 @@ onMounted(() => {
 }
 
 .top-nav {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
+  position: relative;
   z-index: 30;
   padding: 12px 18px 0;
 }
@@ -477,7 +502,7 @@ onMounted(() => {
 .main-layout {
   position: relative;
   z-index: 1;
-  padding-top: 110px;
+  padding-top: 18px;
 }
 
 .container-inner {

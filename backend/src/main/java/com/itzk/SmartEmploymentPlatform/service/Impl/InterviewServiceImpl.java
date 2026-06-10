@@ -12,6 +12,7 @@ import com.itzk.SmartEmploymentPlatform.pojo.vo.ResumeVO;
 import com.itzk.SmartEmploymentPlatform.annotation.OperationLog;
 import com.itzk.SmartEmploymentPlatform.service.InterviewService;
 import com.itzk.SmartEmploymentPlatform.utils.Constant;
+import com.itzk.SmartEmploymentPlatform.utils.UserHolder;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -46,6 +47,7 @@ public class InterviewServiceImpl implements InterviewService {
 
     @OperationLog(action = "INTERVIEW_INVITE", targetType = "interview", targetId = "#interview.id")
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void insert(Interview interview) {
         interviewMapper.insert(interview);
     }
@@ -68,6 +70,10 @@ public class InterviewServiceImpl implements InterviewService {
         Application a=applicationMapper.getById(applicationId);
         if (a==null){
             return Result.error("用户没有该申请记录");
+        }
+        Long companyId = UserHolder.getCompanyId();
+        if (!a.getCompanyId().equals(companyId)) {
+            return Result.error("无权查看该申请");
         }
         Long resumeId = a.getResumeId();
         if (resumeId==null){
@@ -96,6 +102,16 @@ public class InterviewServiceImpl implements InterviewService {
         Long interviewId = interview.getId();
         Long applicationId = interview.getApplicationId();
         String remark = interview.getRemark();
+
+        // 校验公司归属
+        Interview existingView = interviewMapper.getById(interviewId);
+        if (existingView == null) {
+            return;
+        }
+        Long companyId = UserHolder.getCompanyId();
+        if (!existingView.getCompanyId().equals(companyId)) {
+            return;
+        }
 
         // 1. 更新面试表状态
         Interview view = new Interview();
@@ -136,6 +152,12 @@ public class InterviewServiceImpl implements InterviewService {
 
     @Override
     public Result updateInterview(Interview interview) {
+        // 校验公司归属
+        Interview existing = interviewMapper.getById(interview.getId());
+        Long companyId = UserHolder.getCompanyId();
+        if (existing == null || !existing.getCompanyId().equals(companyId)) {
+            return Result.error("无权操作该面试");
+        }
         Integer status = interview.getStatus();
         if (status == null) {
             return Result.error("状态码缺失");
@@ -164,8 +186,14 @@ public class InterviewServiceImpl implements InterviewService {
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public Result cancelInterview(Interview interview,Long applicationId) {
+        // 校验公司归属
+        Interview existing = interviewMapper.getById(interview.getId());
+        Long companyId = UserHolder.getCompanyId();
+        if (existing == null || !existing.getCompanyId().equals(companyId)) {
+            return Result.error("无权操作该面试");
+        }
         interview.setStatus(Constant.InterviewStatus.CANCELLED);
         interviewMapper.updata(interview);
         //修改职位申请表的状态

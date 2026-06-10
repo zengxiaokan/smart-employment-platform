@@ -8,8 +8,10 @@ import com.itzk.SmartEmploymentPlatform.pojo.vo.JobRecommendVO;
 import com.itzk.SmartEmploymentPlatform.service.JobsService;
 import com.itzk.SmartEmploymentPlatform.utils.UserHolder;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import com.itzk.SmartEmploymentPlatform.pojo.entry.Job;
@@ -18,6 +20,7 @@ import java.util.List;
 
 //求职控制器
 @Slf4j
+@Validated
 @RestController("employmentJobsController")
 @RequestMapping("/user/jobs")
 public class JobsController {
@@ -85,7 +88,7 @@ public class JobsController {
 
     /** 热门岗位：按投递数 + 浏览量排序 */
     @GetMapping("/hot")
-    public Result<List<Job>> getHotJobs(@RequestParam(defaultValue = "6") int limit){
+    public Result<List<Job>> getHotJobs(@Min(1) @RequestParam(defaultValue = "6") int limit){
         return jobsService.getHotJobs(limit);
     }
 

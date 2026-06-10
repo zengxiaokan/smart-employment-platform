@@ -61,6 +61,16 @@
               :span="item.span || 1"
             >{{ item.value }}</el-descriptions-item>
           </el-descriptions>
+          <!-- 经历列表：原值 -->
+          <div v-for="(group, gi) in originalExperienceGroups" :key="'o-'+gi" class="exp-block">
+            <div class="exp-block-title">{{ group.title }}</div>
+            <el-descriptions v-if="group.items.length" :column="1" border size="small">
+              <el-descriptions-item v-for="(it, ii) in group.items" :key="ii" :label="it.label">
+                <pre class="exp-desc">{{ it.value }}</pre>
+              </el-descriptions-item>
+            </el-descriptions>
+            <div v-else class="exp-empty">暂无{{ group.title }}</div>
+          </div>
         </div>
         <div class="compare-arrow">
           <el-icon :size="28"><Right /></el-icon>
@@ -77,6 +87,16 @@
               <span class="optimized-value">{{ item.value }}</span>
             </el-descriptions-item>
           </el-descriptions>
+          <!-- 经历列表：AI 优化后 -->
+          <div v-for="(group, gi) in optimizedExperienceGroups" :key="'p-'+gi" class="exp-block">
+            <div class="exp-block-title">{{ group.title }}</div>
+            <el-descriptions v-if="group.items.length" :column="1" border size="small">
+              <el-descriptions-item v-for="(it, ii) in group.items" :key="ii" :label="it.label">
+                <pre class="exp-desc optimized-value">{{ it.value }}</pre>
+              </el-descriptions-item>
+            </el-descriptions>
+            <div v-else class="exp-empty">暂无{{ group.title }}</div>
+          </div>
         </div>
       </div>
 
@@ -120,19 +140,57 @@ const optimizedDescriptions = computed(() => {
 const buildDescriptions = (data) => {
   const items = []
   if (data.name) items.push({ label: '姓名', value: data.name })
-  if (data.gender !== undefined) items.push({ label: '性别', value: data.gender === 1 ? '男' : '女' })
+  if (data.gender !== undefined && data.gender !== null) items.push({ label: '性别', value: data.gender === 1 ? '男' : data.gender === 0 ? '女' : data.gender })
   if (data.age) items.push({ label: '年龄', value: data.age })
   if (data.phone) items.push({ label: '手机号', value: data.phone })
   if (data.email) items.push({ label: '邮箱', value: data.email })
-  if (data.education) items.push({ label: '学历', value: data.education })
-  if (data.school) items.push({ label: '毕业院校', value: data.school })
-  if (data.major) items.push({ label: '专业', value: data.major })
-  if (data.workYears) items.push({ label: '工作经验', value: data.workYears + '年' })
   if (data.jobIntention) items.push({ label: '期望职位', value: data.jobIntention, span: 2 })
+  if (data.city) items.push({ label: '期望城市', value: data.city })
+  if (data.salaryMin || data.salaryMax) {
+    items.push({ label: '期望薪资', value: `${data.salaryMin || '?'} - ${data.salaryMax || '?'} K`, span: 2 })
+  }
   if (data.skills) items.push({ label: '技能特长', value: data.skills, span: 2 })
-  if (data.selfEvaluation) items.push({ label: '自我评价', value: data.selfEvaluation, span: 2 })
+  // 修正：后端字段是 selfDescription，不是 selfEvaluation
+  if (data.selfDescription) items.push({ label: '自我评价', value: data.selfDescription, span: 2 })
   return items
 }
+
+// 经历列表（教育 / 工作 / 项目）：原值 vs 优化后并列
+const buildExperienceGroups = (data) => {
+  const groups = []
+  const edus = Array.isArray(data?.educations) ? data.educations : []
+  const exps = Array.isArray(data?.experiences) ? data.experiences : []
+  const projs = Array.isArray(data?.projects) ? data.projects : []
+  groups.push({
+    title: '教育经历',
+    items: edus.map(e => ({
+      label: `${e.school || '未知学校'} · ${e.major || ''} · ${e.education || ''} · ${[e.startTime, e.endTime].filter(Boolean).join(' ~ ') || ''}`,
+      value: e.description || '(无描述)',
+    })),
+  })
+  groups.push({
+    title: '工作经历',
+    items: exps.map(e => ({
+      label: `${e.company || '未知公司'} · ${e.position || ''} · ${[e.startTime, e.endTime].filter(Boolean).join(' ~ ') || ''}`,
+      value: e.description || '(无描述)',
+    })),
+  })
+  groups.push({
+    title: '项目经验',
+    items: projs.map(p => ({
+      label: `${p.name || '未知项目'}${p.role ? ' · ' + p.role : ''} · ${[p.startTime, p.endTime].filter(Boolean).join(' ~ ') || ''}`,
+      value: p.description || '(无描述)',
+    })),
+  })
+  return groups
+}
+
+const originalExperienceGroups = computed(() =>
+  optimizedData.value ? buildExperienceGroups(optimizedData.value.original || {}) : []
+)
+const optimizedExperienceGroups = computed(() =>
+  optimizedData.value ? buildExperienceGroups(optimizedData.value.optimized || {}) : []
+)
 
 const handleOptimize = async () => {
   loadingVisible.value = true
@@ -219,6 +277,39 @@ const handleReject = () => {
 .optimized-value {
   color: #059669;
   font-weight: 600;
+}
+
+.exp-block {
+  margin-top: 14px;
+  padding: 12px;
+  background: rgba(248, 250, 252, 0.6);
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.exp-block-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #475569;
+  margin-bottom: 8px;
+  letter-spacing: 0.04em;
+}
+
+.exp-desc {
+  margin: 0;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.7;
+  color: #334155;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.exp-empty {
+  font-size: 12px;
+  color: #94a3b8;
+  font-style: italic;
+  padding: 6px 2px;
 }
 
 .optimize-actions {

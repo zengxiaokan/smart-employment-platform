@@ -6,11 +6,14 @@ import com.itzk.SmartEmploymentPlatform.pojo.Result;
 import com.itzk.SmartEmploymentPlatform.pojo.vo.AdminCompanyVO;
 import com.itzk.SmartEmploymentPlatform.pojo.vo.AdminUserVO;
 import com.itzk.SmartEmploymentPlatform.service.AdminCompanyService;
+import jakarta.validation.constraints.Min;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
+@Validated
 @RestController("adminCompanyController")
 @RequestMapping("/admin/companies")
 public class CompanyController {
@@ -19,8 +22,8 @@ public class CompanyController {
     private AdminCompanyService adminCompanyService;
 
     @GetMapping
-    public Result<PageResult> list(@RequestParam(defaultValue = "1") int page,
-                                   @RequestParam(defaultValue = "10") int size,
+    public Result<PageResult> list(@Min(1) @RequestParam(defaultValue = "1") int page,
+                                   @Min(1) @RequestParam(defaultValue = "10") int size,
                                    @RequestParam(required = false) String name,
                                    @RequestParam(required = false) String industry,
                                    @RequestParam(required = false) Integer auditStatus) {
@@ -51,8 +54,12 @@ public class CompanyController {
     }
 
     @PutMapping("/{id}/audit")
-    public Result audit(@PathVariable Long id, @RequestBody Map<String, Integer> body) {
-        adminCompanyService.audit(id, body.get("auditStatus"));
+    public Result audit(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        Integer auditStatus = body.get("auditStatus") == null
+                ? null
+                : ((Number) body.get("auditStatus")).intValue();
+        String remark = (String) body.get("remark");
+        adminCompanyService.audit(id, auditStatus, remark);
         return Result.success();
     }
 

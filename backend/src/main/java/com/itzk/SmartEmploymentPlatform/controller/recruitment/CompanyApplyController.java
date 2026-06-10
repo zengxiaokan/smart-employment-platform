@@ -6,6 +6,7 @@ import com.itzk.SmartEmploymentPlatform.pojo.Result;
 import com.itzk.SmartEmploymentPlatform.pojo.entryDTO.CompanyFromDTO;
 import com.itzk.SmartEmploymentPlatform.service.CompanyApplyService;
 import com.itzk.SmartEmploymentPlatform.utils.UserHolder;
+import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -22,7 +23,7 @@ public class CompanyApplyController {
     private CompanyApplyService companyApplyService;
 
     @PostMapping("/apply")
-    public Result commitCompany(@RequestBody CompanyFromDTO companyFromDTO){
+    public Result commitCompany(@RequestBody @Valid CompanyFromDTO companyFromDTO){
         Long userId = UserHolder.getUserId();
         companyFromDTO.setUserId(userId);
         return companyApplyService.insertApply(companyFromDTO);

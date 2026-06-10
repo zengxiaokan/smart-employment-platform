@@ -1,5 +1,6 @@
 package com.itzk.SmartEmploymentPlatform.controller;
 
+import com.itzk.SmartEmploymentPlatform.mapper.ConversationMapper;
 import com.itzk.SmartEmploymentPlatform.pojo.Result;
 import com.itzk.SmartEmploymentPlatform.pojo.entry.Conversation;
 import com.itzk.SmartEmploymentPlatform.pojo.vo.ConversationVO;
@@ -25,6 +26,8 @@ public class ChatController {
 
     @Resource
     private ChatService chatService;
+    @Resource
+    private ConversationMapper conversationMapper;
 
     /**
      * 获取当前用户的所有会话列表。
@@ -74,6 +77,10 @@ public class ChatController {
     @GetMapping({"/messages/{conversationId}", "/conversations/{conversationId}/messages"})
     public Result<List<MessageVO>> getMessages(@PathVariable Long conversationId) {
         Long userId = UserHolder.getUserId();
+        Conversation conv = conversationMapper.selectById(conversationId);
+        if (conv == null || (!conv.getUser1Id().equals(userId) && !conv.getUser2Id().equals(userId))) {
+            return Result.error("无权访问该会话");
+        }
         return Result.success(chatService.getMessages(conversationId, userId));
     }
 

@@ -16,7 +16,6 @@ const hrRoutes = [
   {
     path: "/hr",
     component: () => import("@/layout/HrLayout.vue"),
-    beforeEnter: async () => { await checkCompanyStatus(); return true; },
     children: [
       {
         path: "",

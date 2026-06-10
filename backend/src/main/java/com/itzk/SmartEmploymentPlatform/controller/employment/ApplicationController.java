@@ -1,7 +1,8 @@
 package com.itzk.SmartEmploymentPlatform.controller.employment;
 
+import com.itzk.SmartEmploymentPlatform.mapper.ApplicationMapper;
 import com.itzk.SmartEmploymentPlatform.pojo.Result;
-
+import com.itzk.SmartEmploymentPlatform.pojo.entry.Application;
 import com.itzk.SmartEmploymentPlatform.pojo.entryDTO.ApplicationDTO;
 import com.itzk.SmartEmploymentPlatform.pojo.vo.ApplicationDitailVo;
 import com.itzk.SmartEmploymentPlatform.pojo.vo.SimpleApplicationVo;
@@ -10,6 +11,8 @@ import com.itzk.SmartEmploymentPlatform.utils.UserHolder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+
+import jakarta.validation.Valid;
 
 import java.util.List;
 
@@ -21,7 +24,8 @@ public class ApplicationController {
 
     @Autowired
     private ApplicationService applicationService;
-
+    @Autowired
+    private ApplicationMapper applicationMapper;
 
     /**
      * 岗位投递
@@ -29,7 +33,7 @@ public class ApplicationController {
      * @return
      */
     @PostMapping("/job/apply")
-    public Result commitApplication(@RequestBody ApplicationDTO application) {
+    public Result commitApplication(@Valid @RequestBody ApplicationDTO application) {
         log.info("职位申请 : {}", application);
 
         Long userId = UserHolder.getUserId();
@@ -81,7 +85,11 @@ public class ApplicationController {
 
     @GetMapping("/application/detail/{applicationId}")
     public Result<ApplicationDitailVo> getApplicationDetail(@PathVariable("applicationId") Long applicationId) {
-
+        Long userId = UserHolder.getUserId();
+        Application app = applicationMapper.getById(applicationId);
+        if (app == null || !app.getUserId().equals(userId)) {
+            return Result.error("无权查看该申请");
+        }
         return applicationService.JobandConpanyInfo(applicationId);
     }
 

@@ -337,7 +337,13 @@ public class UserServiceImpl implements UserService {
     @Override
     public Result<UserInfoVo> getUserInfo(Long userId) {
 
+        if (userId == null) {
+            return Result.error("用户ID为空");
+        }
         User u = userMapper.getUserById(userId);
+        if (u == null) {
+            return Result.error("用户不存在");
+        }
         UserInfoVo userInfoVo = BeanUtil.copyProperties(u, UserInfoVo.class);
         //对信息进行隐私处理
         String phone = userInfoVo.getPhone();

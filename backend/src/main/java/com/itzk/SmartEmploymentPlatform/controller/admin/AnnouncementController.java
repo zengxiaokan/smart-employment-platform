@@ -8,11 +8,16 @@ import com.itzk.SmartEmploymentPlatform.pojo.PageResult;
 import com.itzk.SmartEmploymentPlatform.pojo.Result;
 import com.itzk.SmartEmploymentPlatform.pojo.entry.Message;
 import com.itzk.SmartEmploymentPlatform.utils.UserHolder;
+import jakarta.validation.constraints.Min;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
 
+@Slf4j
+@Validated
 @RestController("adminAnnouncementController")
 @RequestMapping("/admin/announcements")
 public class AnnouncementController {
@@ -21,8 +26,8 @@ public class AnnouncementController {
     private MessageMapper messageMapper;
 
     @GetMapping
-    public Result<PageResult> list(@RequestParam(defaultValue = "1") int page,
-                                    @RequestParam(defaultValue = "10") int size) {
+    public Result<PageResult> list(@Min(1) @RequestParam(defaultValue = "1") int page,
+                                    @Min(1) @RequestParam(defaultValue = "10") int size) {
         PageHelper.startPage(page, size);
         List<Message> list = messageMapper.selectAnnouncements(UserHolder.getUserId());
         List<Map<String, Object>> items = new ArrayList<>();
@@ -68,11 +73,8 @@ public class AnnouncementController {
             parsed.put("pinned", pinned);
             messageMapper.updateContent(id, JSON.toJSONString(parsed));
         } catch (Exception e) {
-            Map<String, Object> updated = new LinkedHashMap<>();
-            updated.put("title", "");
-            updated.put("content", "");
-            updated.put("pinned", pinned);
-            messageMapper.updateContent(id, JSON.toJSONString(updated));
+            log.error("解析公告内容失败: id={}", id, e);
+            return Result.error("公告内容格式异常，操作失败");
         }
         return Result.success();
     }

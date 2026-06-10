@@ -25,6 +25,7 @@ import org.springframework.web.client.RestTemplate;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -222,9 +223,11 @@ public class ResumeOptimizeCapability {
 
     /**
      * ④ 校验 AI 返回结果
+     * 数组长度不一致不再抛异常，而是用原值校正（多了截断、少了补 null），
+     * backfill 时取到 null 就用原 description 兜底——保证调用方永远拿到合法 DTO。
      */
     private void validate(ResumeForAI after, ResumeForAI original) {
-        // 占位符不能被篡改
+        // 占位符不能被篡改（这部分必须硬错，关系到隐私）
         if (!"[NAME]".equals(after.getName())) {
             throw new BusinessException("AI篡改了姓名占位符");
         }
@@ -235,31 +238,19 @@ public class ResumeOptimizeCapability {
             throw new BusinessException("AI篡改了邮箱占位符");
         }
 
-        // 数组长度必须一致
-        int origEduSize = original.getEducations() != null ? original.getEducations().size() : 0;
-        int afterEduSize = after.getEducations() != null ? after.getEducations().size() : 0;
-        if (origEduSize != afterEduSize) {
-            throw new BusinessException("AI改变了教育经历数量");
-        }
-
-        int origExpSize = original.getExperiences() != null ? original.getExperiences().size() : 0;
-        int afterExpSize = after.getExperiences() != null ? after.getExperiences().size() : 0;
-        if (origExpSize != afterExpSize) {
-            throw new BusinessException("AI改变了工作经历数量");
-        }
-
-        int origProjSize = original.getProjects() != null ? original.getProjects().size() : 0;
-        int afterProjSize = after.getProjects() != null ? after.getProjects().size() : 0;
-        if (origProjSize != afterProjSize) {
-            throw new BusinessException("AI改变了项目经验数量");
-        }
+        // 数组长度校正：原数组为空时不允许 AI 补全条目
+        after.setEducations(safeResize(after.getEducations(), original.getEducations(), "教育经历"));
+        after.setExperiences(safeResize(after.getExperiences(), original.getExperiences(), "工作经历"));
+        after.setProjects(safeResize(after.getProjects(), original.getProjects(), "项目经验"));
 
         // 教育经历中学校占位符检查
         if (original.getEducations() != null) {
             for (int i = 0; i < original.getEducations().size(); i++) {
                 String origSchool = original.getEducations().get(i).getSchool();
-                String afterSchool = after.getEducations().get(i).getSchool();
-                if (!origSchool.equals(afterSchool)) {
+                EduForAI afterEdu = after.getEducations().get(i);
+                if (afterEdu == null) continue;
+                String afterSchool = afterEdu.getSchool();
+                if (afterSchool != null && !origSchool.equals(afterSchool)) {
                     throw new BusinessException("AI篡改了学校名称占位符: " + origSchool + " -> " + afterSchool);
                 }
             }
@@ -269,8 +260,10 @@ public class ResumeOptimizeCapability {
         if (original.getExperiences() != null) {
             for (int i = 0; i < original.getExperiences().size(); i++) {
                 String origCompany = original.getExperiences().get(i).getCompany();
-                String afterCompany = after.getExperiences().get(i).getCompany();
-                if (!origCompany.equals(afterCompany)) {
+                ExpForAI afterExp = after.getExperiences().get(i);
+                if (afterExp == null) continue;
+                String afterCompany = afterExp.getCompany();
+                if (afterCompany != null && !origCompany.equals(afterCompany)) {
                     throw new BusinessException("AI篡改了公司名称占位符: " + origCompany + " -> " + afterCompany);
                 }
             }
@@ -278,57 +271,108 @@ public class ResumeOptimizeCapability {
     }
 
     /**
+     * 数组长度校正：多了截断、少了补 null
+     * 关键：原数组为 null 或空 → 直接清空 AI 返回（不允许幻觉补全）
+     */
+    private <T> List<T> safeResize(List<T> optimized, List<T> original, String name) {
+        if (original == null || original.isEmpty()) {
+            if (optimized != null && !optimized.isEmpty()) {
+                log.warn("AI 试图为空的 {} 数组补全条目，已全部丢弃", name);
+            }
+            return new ArrayList<>();
+        }
+        if (optimized == null) {
+            return new ArrayList<>(Collections.nCopies(original.size(), null));
+        }
+        if (optimized.size() == original.size()) {
+            return optimized;
+        }
+        if (optimized.size() > original.size()) {
+            log.warn("AI 返回的 {} 数量({})超过原数量({})，已截断",
+                    name, optimized.size(), original.size());
+            return new ArrayList<>(optimized.subList(0, original.size()));
+        }
+        // 不足：补 null（backfill 时取到 null 用原值兜底）
+        List<T> padded = new ArrayList<>(optimized);
+        while (padded.size() < original.size()) {
+            padded.add(null);
+        }
+        log.warn("AI 返回的 {} 数量({})少于原数量({})，已用 null 填充",
+                name, optimized.size(), original.size());
+        return padded;
+    }
+
+    /**
      * ⑤ 回填真实数据：将 AI 优化后的文本字段填回原始 DTO
+     * 关键：AI 改变数组数量时，optimized[i] 可能为 null，此时用原值兜底（保证不丢条目）
      */
     private SaveResumeDTO backfill(SaveResumeDTO original, ResumeForAI optimized) {
         SaveResumeDTO result = new SaveResumeDTO();
         BeanUtils.copyProperties(original, result);
 
-        // 用AI优化后的文本字段替换
-        result.setSelfDescription(optimized.getSelfDescription());
-        result.setJobIntention(optimized.getJobIntention());
-        result.setSkills(optimized.getSkills());
+        // 顶层文本：AI 给了新值就用，否则保留原值（避免 AI 输出 null 时把用户内容清空）
+        if (optimized.getSelfDescription() != null) {
+            result.setSelfDescription(optimized.getSelfDescription());
+        }
+        if (optimized.getJobIntention() != null) {
+            result.setJobIntention(optimized.getJobIntention());
+        }
+        if (optimized.getSkills() != null) {
+            result.setSkills(optimized.getSkills());
+        }
 
         // 教育经历：保留原始学校名，只取AI优化后的 description
-        if (original.getEducations() != null && optimized.getEducations() != null) {
+        if (original.getEducations() != null) {
             List<ResumeEducation> eduList = new ArrayList<>();
+            List<EduForAI> optEdus = optimized.getEducations();
             for (int i = 0; i < original.getEducations().size(); i++) {
                 ResumeEducation origEdu = original.getEducations().get(i);
-                EduForAI optEdu = optimized.getEducations().get(i);
-
                 ResumeEducation newEdu = new ResumeEducation();
                 BeanUtils.copyProperties(origEdu, newEdu);
-                newEdu.setDescription(optEdu.getDescription());
+                if (optEdus != null && i < optEdus.size() && optEdus.get(i) != null) {
+                    String optDesc = optEdus.get(i).getDescription();
+                    if (optDesc != null) {
+                        newEdu.setDescription(optDesc);
+                    }
+                }
                 eduList.add(newEdu);
             }
             result.setEducations(eduList);
         }
 
         // 工作经历：保留原始公司名，只取AI优化后的 description
-        if (original.getExperiences() != null && optimized.getExperiences() != null) {
+        if (original.getExperiences() != null) {
             List<ResumeExperience> expList = new ArrayList<>();
+            List<ExpForAI> optExps = optimized.getExperiences();
             for (int i = 0; i < original.getExperiences().size(); i++) {
                 ResumeExperience origExp = original.getExperiences().get(i);
-                ExpForAI optExp = optimized.getExperiences().get(i);
-
                 ResumeExperience newExp = new ResumeExperience();
                 BeanUtils.copyProperties(origExp, newExp);
-                newExp.setDescription(optExp.getDescription());
+                if (optExps != null && i < optExps.size() && optExps.get(i) != null) {
+                    String optDesc = optExps.get(i).getDescription();
+                    if (optDesc != null) {
+                        newExp.setDescription(optDesc);
+                    }
+                }
                 expList.add(newExp);
             }
             result.setExperiences(expList);
         }
 
         // 项目经验：保留原始数据，只取AI优化后的 description
-        if (original.getProjects() != null && optimized.getProjects() != null) {
+        if (original.getProjects() != null) {
             List<ResumeProject> projList = new ArrayList<>();
+            List<ProjForAI> optProjs = optimized.getProjects();
             for (int i = 0; i < original.getProjects().size(); i++) {
                 ResumeProject origProj = original.getProjects().get(i);
-                ProjForAI optProj = optimized.getProjects().get(i);
-
                 ResumeProject newProj = new ResumeProject();
                 BeanUtils.copyProperties(origProj, newProj);
-                newProj.setDescription(optProj.getDescription());
+                if (optProjs != null && i < optProjs.size() && optProjs.get(i) != null) {
+                    String optDesc = optProjs.get(i).getDescription();
+                    if (optDesc != null) {
+                        newProj.setDescription(optDesc);
+                    }
+                }
                 projList.add(newProj);
             }
             result.setProjects(projList);

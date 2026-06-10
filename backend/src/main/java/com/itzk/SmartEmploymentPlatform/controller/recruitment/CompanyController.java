@@ -9,6 +9,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.validation.Valid;
+
 @RestController("recruitmentCompanyController")
 @Slf4j
 @RequestMapping("hr/company")
@@ -29,9 +31,24 @@ public class CompanyController {
     }
 
     @PutMapping("info")
-    public Result updataCompanyInfo(@RequestBody Company company){
+    public Result updataCompanyInfo(@Valid @RequestBody Company company){
         log.info("修改的数据为{}",company);
+        Long companyId = UserHolder.getCompanyId();
+        if (company.getId() != null && !company.getId().equals(companyId)) {
+            return Result.error("无权修改该公司信息");
+        }
+        company.setId(companyId);
         return companyService.updata(company);
+    }
+
+    /**
+     * 重新申请：把被拒(auditStatus=2)状态重置为待审(0)
+     * 加 Redis 24h 锁防刷
+     */
+    @PostMapping("/reapply")
+    public Result reapply(){
+        Long companyId = UserHolder.getCompanyId();
+        return companyService.reapply(companyId);
     }
 
 

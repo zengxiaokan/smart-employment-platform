@@ -10,6 +10,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.validation.Valid;
+
 @Slf4j
 @RestController
 public class HrController {
@@ -27,7 +29,7 @@ public class HrController {
     }
 
     @PutMapping("/hr/profile")
-    public Result updateUserInfo(@RequestBody UserInfoVo userInfoVo){
+    public Result updateUserInfo(@Valid @RequestBody UserInfoVo userInfoVo){
 
 
         Long userId = UserHolder.getUserId();

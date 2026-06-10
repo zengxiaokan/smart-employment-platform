@@ -388,11 +388,10 @@ public class ResumeServiceImpl implements ResumeService {
             builder.withHtmlContent(html, "");
             builder.toStream(os);
 
-            // 读取字体文件为字节数组，避免 PDFBox 系统字体扫描的影响
-            byte[] fontBytes = null;
+            // 优先使用 File 方式加载系统字体（可正确处理 TTC 格式）
+            boolean fontLoaded = false;
             String[] fontPaths = {
                     "C:/Windows/Fonts/simhei.ttf",
-                    "C:/Windows/Fonts/msyh.ttc",
                     "C:/Windows/Fonts/simsun.ttc",
                     "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",
                     "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
@@ -401,25 +400,25 @@ public class ResumeServiceImpl implements ResumeService {
             for (String p : fontPaths) {
                 File f = new File(p);
                 if (f.exists()) {
-                    fontBytes = java.nio.file.Files.readAllBytes(f.toPath());
-                    log.info("PDF导出使用字体: {} ({} bytes)", p, fontBytes.length);
+                    builder.useFont(f, "chinese");
+                    log.info("PDF导出使用字体: {}", p);
+                    fontLoaded = true;
                     break;
                 }
             }
-            if (fontBytes == null) {
-                // 尝试 classpath 内置字体
+            if (!fontLoaded) {
+                // 回退：classpath 内置字体（仅支持 TTF/OTF 单文件）
                 java.io.InputStream is = getClass().getClassLoader()
                         .getResourceAsStream("fonts/NotoSansSC-Regular.ttf");
                 if (is != null) {
-                    fontBytes = is.readAllBytes();
+                    byte[] fontBytes = is.readAllBytes();
                     is.close();
+                    builder.useFont(() -> new java.io.ByteArrayInputStream(fontBytes), "chinese");
+                    fontLoaded = true;
                     log.info("PDF导出使用内置字体: {} bytes", fontBytes.length);
                 }
             }
-            if (fontBytes != null) {
-                byte[] finalFontBytes = fontBytes;
-                builder.useFont(() -> new java.io.ByteArrayInputStream(finalFontBytes), "chinese");
-            } else {
+            if (!fontLoaded) {
                 log.warn("PDF导出未找到任何中文字体");
             }
 

@@ -1,0 +1,1 @@
+import{t as e}from"./request-DhF4GGYh.js";function t(t){return e({url:`/admin/users`,method:`get`,params:t})}function n(t){return e({url:`/admin/users`,method:`post`,data:t})}function r(t,n){return e({url:`/admin/users/${t}`,method:`put`,data:n})}function i(t){return e({url:`/admin/users/${t}`,method:`delete`})}export{r as i,i as n,t as r,n as t};

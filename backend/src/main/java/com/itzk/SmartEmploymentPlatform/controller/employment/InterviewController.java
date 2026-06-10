@@ -16,6 +16,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.validation.Valid;
+
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -57,13 +59,17 @@ public class InterviewController {
      */
 
     @PutMapping("/status")
-    public Result updateInterviewStatus(@RequestBody UpdataStatusDTO updataStatusDTO) {
+    public Result updateInterviewStatus(@Valid @RequestBody UpdataStatusDTO updataStatusDTO) {
         Long id = updataStatusDTO.getId();
         Byte status = updataStatusDTO.getStatus();
 
         Interview view = interviewMapper.getById(id);
         if (view == null) {
             return Result.error("面试记录不存在");
+        }
+        Long userId = UserHolder.getUserId();
+        if (!view.getUserId().equals(userId)) {
+            return Result.error("无权操作该面试");
         }
 
         Interview interview = new Interview();

@@ -24,7 +24,7 @@ public class GlobalExceptionHandler {
      */
 
     @ExceptionHandler(DuplicateKeyException.class)
-    @ResponseStatus(HttpStatus.CREATED)
+    @ResponseStatus(HttpStatus.CONFLICT)
     public Result handleDuplicateKeyException(DuplicateKeyException e) {
         log.error("唯一键冲突异常：");
         

@@ -18,7 +18,7 @@ public interface AdminCompanyService {
 
     void update(Long id, Map<String, Object> body);
 
-    void audit(Long id, Integer auditStatus);
+    void audit(Long id, Integer auditStatus, String remark);
 
     void delete(Long id);
 }

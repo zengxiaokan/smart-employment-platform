@@ -1,19 +1,55 @@
 <template>
   <div class="ap-root">
+    <!-- 顶部审核状态 banner:未通过审核的 HR 进来第一眼看到状态和理由 -->
+    <div v-if="info.auditStatus !== undefined && info.auditStatus !== 1" class="audit-banner">
+      <el-alert
+        v-if="info.auditStatus === 0"
+        type="warning"
+        :closable="false"
+        show-icon
+      >
+        <template #title>
+          <strong>企业审核中</strong>
+        </template>
+        您的企业资质正在审核中，审核通过后即可使用职位管理、人才搜索等全部功能。请耐心等待。
+      </el-alert>
+      <el-alert
+        v-else-if="info.auditStatus === 2"
+        type="error"
+        :closable="false"
+        show-icon
+      >
+        <template #title>
+          <strong>企业审核未通过</strong>
+        </template>
+        <div v-if="info.auditRemark" class="banner-remark">
+          <div class="banner-remark-label">拒绝理由</div>
+          <div class="banner-remark-content">{{ info.auditRemark }}</div>
+        </div>
+        <div class="banner-tip">
+          请调整资料后前往
+          <router-link to="/hr/setup/pending" class="banner-link">审核状态页</router-link>
+          重新提交申请。
+        </div>
+      </el-alert>
+    </div>
+
     <el-tabs v-model="activeTab" class="ap-tabs">
       <!-- ============ 企业信息 ============ -->
       <el-tab-pane label="企业信息" name="company">
         <div class="ci-card">
           <div class="ci-card-head">
             <h3>企业基本信息</h3>
-            <el-button
-              type="primary"
-              :icon="Edit"
-              size="small"
-              @click="editMode = !editMode"
-            >
-              {{ editMode ? "取消编辑" : "编辑" }}
-            </el-button>
+            <div class="ci-head-actions">
+              <el-button
+                type="primary"
+                :icon="Edit"
+                size="small"
+                @click="editMode = !editMode"
+              >
+                {{ editMode ? "取消编辑" : "编辑" }}
+              </el-button>
+            </div>
           </div>
 
           <el-descriptions v-if="!editMode" :column="2" border size="large">
@@ -42,7 +78,7 @@
               info.industry || "-"
             }}</el-descriptions-item>
             <el-descriptions-item label="企业规模">{{
-              info.size || "-"
+              sizeLabel(info.size)
             }}</el-descriptions-item>
             <el-descriptions-item label="融资阶段">{{
               financeLabel(info.financingStage)
@@ -120,9 +156,9 @@
                   <el-select v-model="editForm.size" style="width: 100%">
                     <el-option
                       v-for="s in sizeOptions"
-                      :key="s"
-                      :label="s"
-                      :value="s"
+                      :key="s.value"
+                      :label="s.label"
+                      :value="s.value"
                     />
                   </el-select>
                 </el-form-item>
@@ -355,10 +391,11 @@
 <script setup>
 import { ref, reactive, onMounted } from "vue";
 import { Edit, Plus, Delete, Upload } from "@element-plus/icons-vue";
-import { ElMessage } from "element-plus";
+import { ElMessage, ElMessageBox } from "element-plus";
 import request from "@/utils/request";
-import { uploadLicense } from "@/api/hr/company";
+import { uploadLicense, getApplicationStatus } from "@/api/hr/company";
 import { getHrProfile, updateHrProfile } from "@/api/hr/profile";
+import { useRouter } from "vue-router";
 import FeedbackView from "@/views/user/profile/FeedbackView.vue";
 import HelpGuide from "./HelpGuide.vue";
 
@@ -377,12 +414,16 @@ const industryOptions = [
   "人工智能",
 ];
 const sizeOptions = [
-  "少于50人",
-  "50-99人",
-  "100-499人",
-  "500-999人",
-  "1000人以上",
+  { label: "少于50人", value: "0" },
+  { label: "50-99人", value: "1" },
+  { label: "100-499人", value: "2" },
+  { label: "500-999人", value: "3" },
+  { label: "1000人以上", value: "4" },
 ];
+const sizeLabel = (v) => {
+  const m = { "0": "少于50人", "1": "50-99人", "2": "100-499人", "3": "500-999人", "4": "1000人以上" };
+  return m[v] ?? "-";
+};
 const financeOptions = [
   { label: "未融资", value: 0 },
   { label: "种子轮", value: 1 },
@@ -437,27 +478,41 @@ const editForm = reactive({
   logoUrl: "",
 });
 
-const loadCompany = () => {
+const loadCompany = async () => {
+  // 优先调接口拿最新公司信息;失败时 fallback 到 localStorage
   try {
-    const raw = localStorage.getItem("companyInfo");
-    if (raw) {
-      const d = JSON.parse(raw);
-      Object.assign(info, d);
-      Object.assign(editForm, {
-        id: d.id ?? null,
-        name: d.name || "",
-        phone: d.phone || "",
-        city: d.city || "",
-        industry: d.industry || "",
-        size: d.size || "",
-        financingStage: d.financingStage ?? null,
-        officialWeb: d.officialWeb || "",
-        address: d.address || "",
-        description: d.description || "",
-        logoUrl: d.logoUrl || "",
-      });
+    const res = await getApplicationStatus();
+    if (res.code === 1 && res.data) {
+      const d = res.data;
+      localStorage.setItem("companyInfo", JSON.stringify(d));
+      fillCompany(d);
+      return;
     }
-  } catch {}
+  } catch (e) {
+    // 接口失败 fallback 到 localStorage
+  }
+  const raw = localStorage.getItem("companyInfo");
+  if (raw) {
+    try { fillCompany(JSON.parse(raw)); } catch {}
+  }
+};
+
+const fillCompany = (d) => {
+  Object.assign(info, d);
+  Object.assign(editForm, {
+    id: d.id ?? null,
+    name: d.name || "",
+    phone: d.phone || "",
+    city: d.city || "",
+    industry: d.industry || "",
+    size: d.size || "",
+    financingStage: d.financingStage ?? null,
+    officialWeb: d.officialWeb || "",
+    address: d.address || "",
+    description: d.description || "",
+    logoUrl: d.logoUrl || "",
+    licenseUrl: d.licenseUrl || "",
+  });
 };
 
 const saveInfo = async () => {
@@ -638,6 +693,48 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   margin-bottom: 20px;
+}
+.ci-head-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.audit-banner {
+  margin-bottom: 18px;
+}
+
+.banner-remark {
+  margin-top: 6px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(254, 242, 242, 0.6);
+  border: 1px solid rgba(254, 202, 202, 0.6);
+}
+.banner-remark-label {
+  font-size: 12px;
+  color: #991b1b;
+  font-weight: 700;
+  margin-bottom: 4px;
+  letter-spacing: 0.04em;
+}
+.banner-remark-content {
+  font-size: 13px;
+  line-height: 1.7;
+  color: #7f1d1d;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.banner-tip {
+  margin-top: 8px;
+  font-size: 13px;
+  color: #7f1d1d;
+}
+.banner-link {
+  color: #1d4ed8;
+  font-weight: 700;
+  text-decoration: underline;
+  margin: 0 2px;
 }
 .ci-card-head h3 {
   font-size: 17px;

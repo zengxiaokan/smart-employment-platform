@@ -30,10 +30,19 @@ public class UploadController {
      * @throws Exception
      */
     @PostMapping("/avatar")
-    public Result<String> upload(MultipartFile file) throws Exception {
+    public Result<String> upload(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            return Result.error("文件不能为空");
+        }
         log.info("文件上传：{}", file.getOriginalFilename());
 
-        String avatarUrl = aliyunOSSOperator.uplocad(file, file.getOriginalFilename());
+        String avatarUrl;
+        try {
+            avatarUrl = aliyunOSSOperator.uplocad(file, file.getOriginalFilename());
+        } catch (Exception e) {
+            log.error("文件上传OSS失败", e);
+            return Result.error("文件上传失败，请稍后重试");
+        }
         log.info("文件上传OSS,url:{}", avatarUrl);
         Long userId = UserHolder.getUserId();
         userMapper.uodataAvatar(userId,avatarUrl);
@@ -50,12 +59,20 @@ public class UploadController {
      * @throws Exception
      */
     @PostMapping("/resume")
-    public Result<String> uploadResume(MultipartFile file) throws Exception {
+    public Result<String> uploadResume(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            return Result.error("文件不能为空");
+        }
         log.info("文件上传：{}", file.getOriginalFilename());
 
-        String characterAvatar = aliyunOSSOperator.uplocad(file, file.getOriginalFilename());
+        String characterAvatar;
+        try {
+            characterAvatar = aliyunOSSOperator.uplocad(file, file.getOriginalFilename());
+        } catch (Exception e) {
+            log.error("文件上传OSS失败", e);
+            return Result.error("文件上传失败，请稍后重试");
+        }
         log.info("文件上传OSS,url:{}", characterAvatar);
-
 
         //将文件交给OSS存储
         return Result.success(characterAvatar);
@@ -68,12 +85,20 @@ public class UploadController {
      * @throws Exception
      */
     @PostMapping("/company")
-    public Result<String> uploadCompany(MultipartFile file) throws Exception {
+    public Result<String> uploadCompany(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            return Result.error("文件不能为空");
+        }
         log.info("文件上传：{}", file.getOriginalFilename());
 
-        String characterAvatar = aliyunOSSOperator.uplocad(file, file.getOriginalFilename());
+        String characterAvatar;
+        try {
+            characterAvatar = aliyunOSSOperator.uplocad(file, file.getOriginalFilename());
+        } catch (Exception e) {
+            log.error("文件上传OSS失败", e);
+            return Result.error("文件上传失败，请稍后重试");
+        }
         log.info("文件上传OSS,url:{}", characterAvatar);
-
 
         //将文件交给OSS存储
         return Result.success(characterAvatar);

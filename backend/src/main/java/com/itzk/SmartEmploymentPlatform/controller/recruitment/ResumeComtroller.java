@@ -21,6 +21,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.validation.Valid;
+
 import java.time.LocalDateTime;
 
 @RestController("recruitmentResumeComtroller")
@@ -71,7 +73,7 @@ public class ResumeComtroller {
      * @return
      */
     @PostMapping("/interview")
-    public Result createInterview(@RequestBody Interview interview){
+    public Result createInterview(@Valid @RequestBody Interview interview){
         LocalDateTime now = LocalDateTime.now();
         if (interview.getId() == null){
             log.info("建立面试邀约{}", interview);
@@ -105,16 +107,26 @@ public class ResumeComtroller {
     }
 
     @PutMapping("status")
-    public Result updateStatus(@RequestBody UpdataStatusDTO updataStatusDTO){
+    public Result updateStatus(@Valid @RequestBody UpdataStatusDTO updataStatusDTO){
         log.info("id={}的状态要修改为:{}", updataStatusDTO.getId(), updataStatusDTO.getStatus());
+        Long companyId = UserHolder.getCompanyId();
+        Application app = applicationMapper.getById(updataStatusDTO.getId());
+        if (app == null || !app.getCompanyId().equals(companyId)) {
+            return Result.error("无权操作该申请");
+        }
         applicationMapper.setStatusById(updataStatusDTO.getId(),updataStatusDTO.getStatus());
         return Result.success();
     }
 
 
     @PutMapping("remark")
-    public Result updateRemark(@RequestBody UpdataStatusDTO updataStatusDTO){
+    public Result updateRemark(@Valid @RequestBody UpdataStatusDTO updataStatusDTO){
         log.info("id={}的备注要修改为:{}", updataStatusDTO.getId(), updataStatusDTO.getHrRemark());
+        Long companyId = UserHolder.getCompanyId();
+        Application app = applicationMapper.getById(updataStatusDTO.getId());
+        if (app == null || !app.getCompanyId().equals(companyId)) {
+            return Result.error("无权操作该申请");
+        }
         Application a = new Application();
         a.setId(updataStatusDTO.getId());
         a.setHrRemark(updataStatusDTO.getHrRemark());

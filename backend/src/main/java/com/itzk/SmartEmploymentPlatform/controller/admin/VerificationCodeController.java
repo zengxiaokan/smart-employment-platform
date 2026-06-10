@@ -2,6 +2,7 @@ package com.itzk.SmartEmploymentPlatform.controller.admin;
 
 import com.alibaba.fastjson2.JSON;
 import com.itzk.SmartEmploymentPlatform.pojo.Result;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -15,6 +16,7 @@ import java.util.Map;
 /**
  * 管理员查看验证码记录（开发/演示环境用，正式上线后可移除）
  */
+@Slf4j
 @RestController("adminVerificationCodeController")
 @RequestMapping("/admin/verification")
 public class VerificationCodeController {
@@ -30,7 +32,9 @@ public class VerificationCodeController {
             for (String s : raw) {
                 try {
                     list.add(JSON.parseObject(s, Map.class));
-                } catch (Exception ignored) {}
+                } catch (Exception e) {
+                    log.warn("解析验证码记录失败: {}", e.getMessage());
+                }
             }
         }
         return Result.success(list);

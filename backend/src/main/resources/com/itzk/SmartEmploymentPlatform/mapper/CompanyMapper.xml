@@ -72,6 +72,9 @@
             <if test="auditStatus != null">
                 audit_status = #{auditStatus},
             </if>
+            <if test="auditRemark != null">
+                audit_remark = #{auditRemark},
+            </if>
             <if test="jobCount != null">
                 job_count = #{jobCount},
             </if>
@@ -154,6 +157,7 @@
                c.audit_status AS auditStatus, c.phone, c.financing_stage AS financingStage,
                c.official_web AS officialWeb, c.description,
                c.logo_url AS logoUrl, c.license_url AS licenseUrl,
+               c.audit_remark AS auditRemark,
                COALESCE(u.realname, u.nickname, '') AS registrant,
                DATE_FORMAT(c.created_at, '%Y-%m-%d %H:%i:%s') AS createdAt
         FROM companies c

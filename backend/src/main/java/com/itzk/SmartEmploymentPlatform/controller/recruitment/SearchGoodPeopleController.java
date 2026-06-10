@@ -6,6 +6,7 @@ import com.itzk.SmartEmploymentPlatform.pojo.entryDTO.QueryResumeDTO;
 import com.itzk.SmartEmploymentPlatform.service.ResumeService;
 import com.itzk.SmartEmploymentPlatform.service.SearchGoodPeopleService;
 import com.itzk.SmartEmploymentPlatform.utils.UserHolder;
+import jakarta.validation.Valid;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,7 +39,7 @@ public class SearchGoodPeopleController {
 
     //收藏用户的简历
     @PostMapping("/favorite")
-    public Result favorite(@RequestBody FavorResumDTO dto) {
+    public Result favorite(@Valid @RequestBody FavorResumDTO dto) {
         Long companyId = UserHolder.getCompanyId();
         dto.setCompanyId(companyId);
         dto.setCreateAt(LocalDateTime.now());
@@ -69,8 +70,8 @@ public class SearchGoodPeopleController {
      * @return
      */
     @PutMapping("favorite/reason")
-    public Result updateFavorite(Long resumeId,String reason) {
-        return searchGoodPeopleService.updataRemark(resumeId,reason);
+    public Result updateFavorite(@RequestParam Long resumeId, @RequestParam String reason) {
+        return searchGoodPeopleService.updataRemark(resumeId, reason);
     }
 
 

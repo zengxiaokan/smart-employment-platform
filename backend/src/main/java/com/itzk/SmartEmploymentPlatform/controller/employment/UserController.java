@@ -9,6 +9,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.validation.Valid;
+
 import java.util.Map;
 
 @Slf4j
@@ -26,7 +28,7 @@ public class UserController {
     }
 
     @PutMapping("/user/profile")
-    public Result updateUserInfo(@RequestBody UserInfoVo userInfoVo){
+    public Result updateUserInfo(@Valid @RequestBody UserInfoVo userInfoVo){
         Long userId = UserHolder.getUserId();
         log.info("修改个人信息"+userId);
         userInfoVo.setUserId(userId);

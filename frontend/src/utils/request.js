@@ -41,16 +41,24 @@ request.interceptors.response.use(
   },
   error => {
     if (error.response) {
-      const { status } = error.response;
+      const { status, data } = error.response;
+      // 后端拦截器 / 业务异常都会把 msg 放进 data.msg；data.code 是业务 code
+      const serverMsg = data && (data.msg || data.message);
       if (status === 401) {
-        ElMessage.error('登录已过期，请重新登录');
+        ElMessage.error(serverMsg || '登录已过期，请重新登录');
         localStorage.removeItem('loginUser');
         clearChatCache();
         router.replace('/login');
         return Promise.reject(error);
       }
       if (status === 403) {
-        ElMessage.error('没有操作权限');
+        // 优先使用后端 msg，区分"无权限"和"公司未审核"等场景
+        ElMessage.error(serverMsg || '没有操作权限');
+        return Promise.reject(error);
+      }
+      if (status === 400) {
+        // @Valid 校验失败 / BusinessException
+        ElMessage.error(serverMsg || '请求参数有误');
         return Promise.reject(error);
       }
     }

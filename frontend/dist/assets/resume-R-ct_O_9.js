@@ -1,1 +1,0 @@
-import{t as e}from"./request-CCPAwz2u.js";function t(t,n){return e({url:`/hr/resumes/detail/${t}`,method:`get`,params:{applicationId:n}})}function n(t){return e({url:`/hr/interviews/resume/${t}`,method:`get`})}export{t as n,n as t};

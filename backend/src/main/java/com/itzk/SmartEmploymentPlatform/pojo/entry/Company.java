@@ -40,6 +40,9 @@ public class Company {
     /** 审核状态：0-待审核，1-已通过，2-未通过 */
     private Byte auditStatus;
 
+    /** 审核备注：拒绝时填写原因，HR 在 SetupPending 页面可见 */
+    private String auditRemark;
+
     /** 创建时间 */
     private LocalDateTime createdAt;
 

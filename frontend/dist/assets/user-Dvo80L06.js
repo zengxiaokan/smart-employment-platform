@@ -1,1 +1,0 @@
-import{t as e}from"./request-CCPAwz2u.js";function t(t){return e({url:`/upload/avatar`,method:`post`,data:t,headers:{"Content-Type":`multipart/form-data`}})}function n(){return e({url:`/user/stats`,method:`get`})}function r(){return e({url:`/user/home/stats`,method:`get`})}export{n,t as r,r as t};

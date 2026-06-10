@@ -185,6 +185,7 @@ import { useRouter } from "vue-router";
 import { ElMessage } from "element-plus";
 import { User, Lock, Key, Iphone, UserFilled, Avatar, School } from "@element-plus/icons-vue";
 import { loginpwd, loginphone, sendCodeApi, registerApi, forgotPwdCodeApi, forgotPwdVerifyApi, forgotPwdResetApi } from "@/api/login";
+import { resetHrStatus } from "@/utils/hrStatus";
 
 const router = useRouter();
 const mode = ref("login");
@@ -352,8 +353,9 @@ const handleLogin = async () => {
       }
       if (!target) { ElMessage.error("未知身份"); return; }
       localStorage.setItem("loginUser", JSON.stringify(res.data));
+      resetHrStatus(); // 重置状态，确保登录后重新检测企业审核状态
       ElMessage.success("登录成功");
-      router.replace(target);
+      await router.replace(target);
     } else { ElMessage.error(res.msg || "登录失败"); }
   } catch { ElMessage.error("网络异常"); }
   finally { loading.value = false; }

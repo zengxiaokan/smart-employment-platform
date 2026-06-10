@@ -10,6 +10,7 @@ import com.itzk.SmartEmploymentPlatform.pojo.entryDTO.ApplicationQueryDTO;
 import com.itzk.SmartEmploymentPlatform.pojo.vo.ApplicationHrVO;
 import com.itzk.SmartEmploymentPlatform.pojo.vo.DashboardVO;
 import com.itzk.SmartEmploymentPlatform.service.DashboardService;
+import com.itzk.SmartEmploymentPlatform.utils.UserHolder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -31,6 +32,10 @@ public class DashboardServiceImpl implements DashboardService {
 
     @Override
     public DashboardVO getDashboard(Long companyId) {
+        Long currentCompanyId = UserHolder.getCompanyId();
+        if (currentCompanyId == null || !currentCompanyId.equals(companyId)) {
+            throw new RuntimeException("无权查看该企业数据");
+        }
         LocalDateTime monthStart = LocalDate.now().withDayOfMonth(1).atStartOfDay();
 
         DashboardVO vo = new DashboardVO();

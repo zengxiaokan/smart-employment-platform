@@ -1,16 +1,16 @@
 <template>
-  <div class="pending-page">
+  <div :class="embedded ? 'pending-inline' : 'pending-page'">
     <div class="pending-card">
       <div class="status-icon">
-        <el-icon :size="64"><Clock /></el-icon>
+        <el-icon :size="embedded ? 48 : 64"><Clock /></el-icon>
       </div>
-      <h1>申请审核中</h1>
-      <p>您的企业绑定申请已提交，请耐心等待审核结果</p>
+      <h1>{{ titleText }}</h1>
+      <p>{{ subtitleText }}</p>
 
       <div class="info-box">
-        <div class="info-item" v-if="application.companyName">
+        <div class="info-item" v-if="companyName">
           <span class="info-label">企业名称</span>
-          <span class="info-value">{{ application.companyName }}</span>
+          <span class="info-value">{{ companyName }}</span>
         </div>
         <div class="info-item">
           <span class="info-label">申请类型</span>
@@ -22,20 +22,29 @@
             {{ statusText }}
           </span>
         </div>
+        <div v-if="auditStatus === 2 && auditRemark" class="remark-block">
+          <div class="remark-label">管理员拒绝理由</div>
+          <div class="remark-content">{{ auditRemark }}</div>
+        </div>
       </div>
 
-      <div class="pending-actions" v-if="application.status === 2">
-        <el-button type="primary" size="large" @click="goBackSetup">重新申请</el-button>
-      </div>
-
-      <div class="pending-actions" v-if="application.status === 0">
-        <el-button type="primary" size="large" :loading="refreshing" @click="checkStatus">
-          <el-icon><Refresh /></el-icon> 刷新状态
+      <div class="pending-actions" v-if="(auditStatus === 2 || auditStatus === 0) && !embedded">
+        <el-button type="primary" size="large" :loading="reapplying" @click="handleReapply">
+          {{ auditStatus === 2 ? '重新申请' : '刷新申请' }}
         </el-button>
+        <el-button size="large" @click="goToDashboard">返回控制台</el-button>
       </div>
 
-      <div class="pending-actions">
-        <el-button @click="goToLogin">返回登录</el-button>
+      <div class="pending-actions" v-else-if="auditStatus === 1 && !embedded">
+        <el-button type="success" size="large" @click="goToWorkbench">进入 HR 工作台</el-button>
+        <el-button size="large" @click="goToDashboard">返回控制台</el-button>
+      </div>
+
+      <!-- embedded 模式：只有重新申请按钮 -->
+      <div class="pending-actions" v-else-if="(auditStatus === 2 || auditStatus === 0) && embedded">
+        <el-button type="primary" size="large" :loading="reapplying" @click="handleReapply">
+          {{ auditStatus === 2 ? '重新申请' : '刷新申请' }}
+        </el-button>
       </div>
     </div>
   </div>
@@ -46,22 +55,59 @@ import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { ElMessage } from "element-plus";
 import { Clock, Refresh } from "@element-plus/icons-vue";
-import { getApplicationStatus } from "@/api/hr/company";
+import { getApplicationStatus, reapplyCompany } from "@/api/hr/company";
+import {
+  auditStatus,
+  companyApproved,
+  companyRejected,
+  checkCompanyStatus,
+  statusChecked,
+} from "@/utils/hrStatus";
+
+// embedded=true:嵌入到 HrLayout 内(由父组件控制跳转,不自动跳走)
+// embedded=false:独立页面模式(从 /hr/setup 提交后跳过来用,自动检测并跳到 /hr)
+const props = defineProps({
+  embedded: { type: Boolean, default: false },
+});
 
 const router = useRouter();
 const refreshing = ref(false);
-const application = ref({
-  applyType: 1, companyName: "", status: 0, auditRemark: "",
+const reapplying = ref(false);
+
+const companyName = computed(() => {
+  try {
+    const info = JSON.parse(localStorage.getItem("companyInfo") || "{}");
+    return info.name || "";
+  } catch { return ""; }
+});
+
+const auditRemark = computed(() => {
+  try {
+    const info = JSON.parse(localStorage.getItem("companyInfo") || "{}");
+    return info.auditRemark || "";
+  } catch { return ""; }
 });
 
 const statusText = computed(() => {
-  const map = { 0: "待审核", 1: "审核通过", 2: "审核拒绝", 3: "已撤回" };
-  return map[application.value.status] || "未知";
+  const map = { "-1": "未知", 0: "待审核", 1: "审核通过", 2: "审核拒绝", 3: "已撤回" };
+  return map[String(auditStatus.value)] || "未知";
 });
 
 const statusClass = computed(() => {
   const map = { 0: "s-pending", 1: "s-passed", 2: "s-rejected", 3: "s-cancelled" };
-  return map[application.value.status] || "";
+  return map[auditStatus.value] || "";
+});
+
+const titleText = computed(() => {
+  if (auditStatus.value === 2) return "企业审核未通过";
+  if (auditStatus.value === 1) return "🎉 恭喜！您的企业已通过审核";
+  return "申请审核中";
+});
+
+const subtitleText = computed(() => {
+  if (auditStatus.value === 2) return "请根据下方理由调整资料后重新提交申请";
+  if (auditStatus.value === 1) return "现在可以使用 HR 工作台的全部功能,快去发布职位、搜索人才吧";
+  return "您的企业绑定申请已提交，点击「刷新申请」提高审核优先级，让管理员更早看到";
 });
 
 const forceLogout = (msg) => {
@@ -76,18 +122,20 @@ const checkStatus = async () => {
     const res = await getApplicationStatus();
     if (res.code === 1 && res.data) {
       const c = res.data;
-      application.value.status = c.auditStatus;
-      application.value.companyName = c.name;
-      if (c.auditStatus === 1) {
-        const user = JSON.parse(localStorage.getItem("loginUser") || "{}");
+      // 同步全局状态(hrStatus.js 的 ref),embedded 模式下父组件会自动切到 dashboard
+      auditStatus.value = typeof c.auditStatus === "number" ? c.auditStatus : -1;
+      companyApproved.value = c.auditStatus === 1;
+      companyRejected.value = c.auditStatus === 2;
+      localStorage.setItem("companyInfo", JSON.stringify(c));
+      // 同步 loginUser
+      const user = JSON.parse(localStorage.getItem("loginUser") || "{}");
+      if (c.name) {
         user.companyName = c.name;
         user.companyId = c.id;
-        user.avatarUrl = c.logoUrl || user.avatarUrl;
+        if (c.logoUrl) user.avatarUrl = c.logoUrl;
         localStorage.setItem("loginUser", JSON.stringify(user));
-        localStorage.setItem("companyInfo", JSON.stringify(c));
-        ElMessage.success("审核已通过，即将跳转");
-        setTimeout(() => router.replace("/hr"), 600);
       }
+      // status=1 不再 setTimeout 自动跳,让用户看到成功页后自己点"进入工作台"
     } else {
       forceLogout(res.msg || "请重新登录获取状态");
     }
@@ -102,12 +150,51 @@ const goBackSetup = () => {
   router.replace("/hr/setup");
 };
 
+/**
+ * 重新申请：
+ * - status=0: 仅刷新 updatedAt 顶时间
+ * - status=2: 重置为待审核(0),清空拒绝理由
+ * 后端有 Redis 24h 锁,一天只能操作一次
+ */
+const handleReapply = async () => {
+  if (reapplying.value) return;
+  reapplying.value = true;
+  try {
+    const res = await reapplyCompany();
+    if (res.code === 1) {
+      ElMessage.success(
+        auditStatus.value === 2
+          ? "已重新提交申请，请等待管理员审核"
+          : "已刷新申请时间，请耐心等待审核"
+      );
+      await checkStatus();
+    } else {
+      ElMessage.error(res.msg || "操作失败");
+    }
+  } catch {
+    // request.js 已经提示过
+  } finally {
+    reapplying.value = false;
+  }
+};
+
+const goToWorkbench = () => {
+  router.replace("/hr");
+};
+
+const goToDashboard = () => {
+  router.replace("/hr");
+};
+
 const goToLogin = () => {
   localStorage.clear();
   router.replace("/login");
 };
 
 onMounted(() => {
+  // embedded 模式下 HrLayout 已经在 onMounted 调过 checkCompanyStatus,不要重复
+  if (props.embedded && statusChecked.value) return;
+  // 否则用 checkStatus 同步全局 + 模板
   checkStatus();
 });
 </script>
@@ -122,6 +209,14 @@ onMounted(() => {
   padding: 40px 20px;
 }
 
+/* 嵌入模式:在父容器里正常流式布局,去掉全屏背景和固定卡片宽度 */
+.pending-inline {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  padding: 24px 0;
+}
+
 .pending-card {
   width: 100%;
   max-width: 480px;
@@ -130,6 +225,12 @@ onMounted(() => {
   padding: 48px 36px;
   text-align: center;
   box-shadow: 0 16px 48px rgba(0,0,0,0.08);
+}
+
+.pending-inline .pending-card {
+  max-width: 560px;
+  padding: 32px 28px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.04);
 }
 
 .status-icon {
@@ -144,8 +245,17 @@ onMounted(() => {
   color: #1677ff;
 }
 
+.pending-inline .status-icon {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 14px;
+}
+
 .pending-card h1 { font-size: 22px; font-weight: 700; color: #1a1a1a; margin: 0 0 8px; }
 .pending-card > p { font-size: 14px; color: #909399; margin: 0 0 32px; }
+
+.pending-inline .pending-card h1 { font-size: 18px; margin: 0 0 6px; }
+.pending-inline .pending-card > p { font-size: 13px; margin: 0 0 20px; }
 
 .info-box {
   background: #f5f7fa;
@@ -173,5 +283,33 @@ onMounted(() => {
 .s-rejected { color: #ef4444; background: #fee2e2; }
 .s-cancelled { color: #6b7280; background: #f3f4f6; }
 
-.pending-actions { margin-top: 8px; }
+.remark-block {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+}
+.remark-label {
+  font-size: 12px;
+  color: #991b1b;
+  font-weight: 700;
+  margin-bottom: 6px;
+  letter-spacing: 0.04em;
+}
+.remark-content {
+  font-size: 13px;
+  line-height: 1.7;
+  color: #7f1d1d;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.pending-actions {
+  margin-top: 8px;
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+}
+.pending-actions + .pending-actions { margin-top: 4px; }
 </style>

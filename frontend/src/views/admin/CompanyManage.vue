@@ -14,6 +14,7 @@
           <el-select v-model="queryForm.auditStatus" placeholder="全部" clearable style="width: 120px">
             <el-option label="待审核" :value="0" />
             <el-option label="已认证" :value="1" />
+            <el-option label="已拒绝" :value="2" />
           </el-select>
         </el-form-item>
         <el-form-item>
@@ -47,15 +48,12 @@
       <el-table-column prop="address" label="地址" min-width="150" show-overflow-tooltip />
       <el-table-column label="认证状态" width="100">
         <template #default="{ row }">
-          <el-switch
-            :model-value="row.auditStatus"
-            :active-value="1"
-            :inactive-value="0"
-            active-text="已认证"
-            inactive-text="待审"
-            inline-prompt
-            @change="(val) => handleAudit(row, val)"
-          />
+          <el-tag v-if="row.auditStatus === 0" type="warning" size="small">待审核</el-tag>
+          <el-tag v-else-if="row.auditStatus === 1" type="success" size="small">已认证</el-tag>
+          <el-tooltip v-else-if="row.auditStatus === 2 && row.auditRemark" :content="row.auditRemark" placement="top">
+            <el-tag type="danger" size="small">已拒绝</el-tag>
+          </el-tooltip>
+          <el-tag v-else type="danger" size="small">已拒绝</el-tag>
         </template>
       </el-table-column>
       <el-table-column label="注册人" width="110">
@@ -67,9 +65,19 @@
         </template>
       </el-table-column>
       <el-table-column prop="createdAt" label="入驻时间" width="170" />
-      <el-table-column label="操作" width="100" fixed="right">
+      <el-table-column label="操作" width="220" fixed="right">
         <template #default="{ row }">
           <el-button link type="primary" @click="handleDetail(row)">查看</el-button>
+          <template v-if="row.auditStatus === 0">
+            <el-button link type="success" @click="handleApprove(row)">通过</el-button>
+            <el-button link type="danger" @click="openRejectDialog(row)">拒绝</el-button>
+          </template>
+          <template v-else-if="row.auditStatus === 1">
+            <el-button link type="warning" @click="handleRevoke(row)">取消认证</el-button>
+          </template>
+          <template v-else-if="row.auditStatus === 2">
+            <el-button link type="success" @click="handleApprove(row)">改为通过</el-button>
+          </template>
         </template>
       </el-table-column>
     </el-table>
@@ -110,13 +118,42 @@
       </el-descriptions>
       <el-empty v-else-if="!registrantLoading" description="未找到该注册人信息" />
     </el-dialog>
+
+    <!-- 拒绝审核弹窗（理由必填） -->
+    <el-dialog
+      v-model="rejectDialogVisible"
+      title="拒绝企业审核"
+      width="520px"
+      :close-on-click-modal="false"
+      :close-on-press-escape="false"
+    >
+      <el-form :model="rejectForm" :rules="rejectRules" ref="rejectFormRef" label-width="80px">
+        <el-form-item label="企业名称">
+          <span class="reject-company-name">{{ rejectForm.companyName }}</span>
+        </el-form-item>
+        <el-form-item label="拒绝理由" prop="remark">
+          <el-input
+            v-model="rejectForm.remark"
+            type="textarea"
+            :rows="4"
+            :maxlength="500"
+            show-word-limit
+            placeholder="请说明拒绝原因，HR 将在审核状态页看到此说明"
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="rejectDialogVisible = false">取消</el-button>
+        <el-button type="danger" :loading="rejectSubmitting" @click="submitReject">确认拒绝</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, nextTick } from 'vue'
 import { Refresh } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { getCompanies, auditCompany, getCompanyRegistrant } from '@/api/admin/companies'
 import CompanyDetailDialog from '@/components/CompanyDetailDialog.vue'
 
@@ -136,13 +173,75 @@ const registrantVisible = ref(false)
 const registrantUser = ref(null)
 const registrantLoading = ref(false)
 
-const handleAudit = async (row, val) => {
+// 拒绝弹窗
+const rejectDialogVisible = ref(false)
+const rejectSubmitting = ref(false)
+const rejectFormRef = ref(null)
+const rejectForm = reactive({ id: null, companyName: '', remark: '' })
+const rejectRules = {
+  remark: [
+    { required: true, message: '拒绝时必须填写理由', trigger: 'blur' },
+    { min: 2, max: 500, message: '理由长度 2-500 字', trigger: 'blur' },
+  ],
+}
+
+const handleApprove = async (row) => {
   try {
-    const status = val ? 1 : 0
-    await auditCompany(row.id, status)
-    row.auditStatus = status
-    ElMessage.success(status === 1 ? '已认证' : '已取消认证')
+    await ElMessageBox.confirm(
+      `确认通过「${row.name}」的企业审核？通过后该企业可使用所有 HR 业务功能。`,
+      '通过审核',
+      { type: 'success', confirmButtonText: '确认通过', cancelButtonText: '取消' }
+    )
+  } catch { return }
+  try {
+    await auditCompany(row.id, 1, null)
+    row.auditStatus = 1
+    row.auditRemark = null
+    ElMessage.success('已通过审核')
+  } catch { /* request.js 已提示 */ }
+}
+
+const handleRevoke = async (row) => {
+  try {
+    await ElMessageBox.confirm(
+      `确认取消「${row.name}」的认证？取消后该企业 HR 端业务功能将不可用。`,
+      '取消认证',
+      { type: 'warning', confirmButtonText: '确认取消', cancelButtonText: '再想想' }
+    )
+  } catch { return }
+  try {
+    await auditCompany(row.id, 0, null)
+    row.auditStatus = 0
+    ElMessage.success('已取消认证')
   } catch { /* */ }
+}
+
+const openRejectDialog = (row) => {
+  rejectForm.id = row.id
+  rejectForm.companyName = row.name
+  rejectForm.remark = ''
+  rejectDialogVisible.value = true
+  nextTick(() => rejectFormRef.value?.clearValidate())
+}
+
+const submitReject = async () => {
+  if (!rejectFormRef.value) return
+  try {
+    await rejectFormRef.value.validate()
+  } catch { return }
+  rejectSubmitting.value = true
+  try {
+    await auditCompany(rejectForm.id, 2, rejectForm.remark.trim())
+    // 同步更新列表行
+    const row = list.value.find(r => r.id === rejectForm.id)
+    if (row) {
+      row.auditStatus = 2
+      row.auditRemark = rejectForm.remark.trim()
+    }
+    ElMessage.success('已拒绝该企业的审核')
+    rejectDialogVisible.value = false
+  } catch { /* */ }
+  finally { rejectSubmitting.value = false }
 }
 
 const handleDetail = (row) => {
@@ -197,4 +296,5 @@ onMounted(fetchList)
 :deep(.el-table) { border-radius: 8px; overflow: hidden; }
 .no-logo { color: #c0c4cc; font-size: 12px; }
 .no-registrant { color: #c0c4cc; }
+.reject-company-name { font-weight: 600; color: #303133; }
 </style>

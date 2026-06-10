@@ -5,11 +5,14 @@ import com.itzk.SmartEmploymentPlatform.pojo.PageResult;
 import com.itzk.SmartEmploymentPlatform.pojo.Result;
 import com.itzk.SmartEmploymentPlatform.pojo.vo.AdminUserVO;
 import com.itzk.SmartEmploymentPlatform.service.AdminUserService;
+import jakarta.validation.constraints.Min;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
+@Validated
 @RestController("adminUserController")
 @RequestMapping("/admin/users")
 public class UserController {
@@ -18,8 +21,8 @@ public class UserController {
     private AdminUserService adminUserService;
 
     @GetMapping
-    public Result<PageResult> list(@RequestParam(defaultValue = "1") int page,
-                                   @RequestParam(defaultValue = "10") int size,
+    public Result<PageResult> list(@Min(1) @RequestParam(defaultValue = "1") int page,
+                                   @Min(1) @RequestParam(defaultValue = "10") int size,
                                    @RequestParam(required = false) String username,
                                    @RequestParam(required = false) String keyword,
                                    @RequestParam(required = false) Integer role,

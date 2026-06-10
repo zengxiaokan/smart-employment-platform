@@ -29,7 +29,7 @@
         apply_count,
         created_at,
         updated_at,
-        hr_user_id,
+        pending_adjust,
         has_count
         FROM jobs
         WHERE status = 1

@@ -5,11 +5,14 @@ import com.itzk.SmartEmploymentPlatform.pojo.PageResult;
 import com.itzk.SmartEmploymentPlatform.pojo.Result;
 import com.itzk.SmartEmploymentPlatform.pojo.vo.FeedbackVO;
 import com.itzk.SmartEmploymentPlatform.service.FeedbackService;
+import jakarta.validation.constraints.Min;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
+@Validated
 @RestController("adminFeedbackController")
 @RequestMapping("/admin/feedbacks")
 public class FeedbackController {
@@ -18,8 +21,8 @@ public class FeedbackController {
     private FeedbackService feedbackService;
 
     @GetMapping
-    public Result<PageResult> list(@RequestParam(defaultValue = "1") int page,
-                                    @RequestParam(defaultValue = "10") int size,
+    public Result<PageResult> list(@Min(1) @RequestParam(defaultValue = "1") int page,
+                                    @Min(1) @RequestParam(defaultValue = "10") int size,
                                     @RequestParam(required = false) Integer type,
                                     @RequestParam(required = false) Integer status) {
         PageInfo<FeedbackVO> pageInfo = feedbackService.listAll(page, size, type, status);

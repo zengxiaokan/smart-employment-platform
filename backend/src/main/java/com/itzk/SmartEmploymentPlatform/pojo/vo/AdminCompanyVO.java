@@ -21,6 +21,7 @@ public class AdminCompanyVO {
     private String logoUrl;
     private String licenseUrl;
     private String registrant;
+    private String auditRemark;
     private Integer jobCount;
     private Integer jobConfirm;
     private String createdAt;

@@ -11,6 +11,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.validation.Valid;
+
 import java.util.List;
 
 @RestController("recruitmenttInterviewController")
@@ -58,12 +60,19 @@ public class InterviewController {
      * 当面试状态变为"面试成功"(3)时，自动将申请状态改为"已录用"(5)
      */
     @PutMapping("/status")
-    public Result updateInterviewStatus(@RequestBody UpdataStatusDTO dto) {
+    public Result updateInterviewStatus(@Valid @RequestBody UpdataStatusDTO dto) {
         log.info("更新面试状态: interviewId={}, status={}", dto.getId(), dto.getStatus());
         Long id = dto.getId();
         Byte status = dto.getStatus();
 
         Interview view = interviewMapper.getById(id);
+        if (view == null) {
+            return Result.error("面试记录不存在");
+        }
+        Long companyId = UserHolder.getCompanyId();
+        if (!view.getCompanyId().equals(companyId)) {
+            return Result.error("无权操作该面试");
+        }
         // 允许：待确认(0)、已接受(1)、待定(2)、已过期(5)
         // 禁止：面试成功(3)、拒绝(4)、已取消(6) —— 这些是终态
         int s = view.getStatus();
@@ -86,13 +95,18 @@ public class InterviewController {
     @GetMapping("/{id}")
     public Result getInterviewDetail(@PathVariable Long id){
         Interview interview = interviewMapper.getById(id);
+        if (interview != null && !interview.getCompanyId().equals(UserHolder.getCompanyId())) {
+            return Result.error("无权查看该面试");
+        }
         return Result.success(interview);
     }
 
     @GetMapping("query")
-    public Result getViewByUserIDAndJobId(Long userId,Long jobId){
-
-        Interview interview = interviewMapper.getByUserIDAndJobId(userId,jobId);
+    public Result getViewByUserIDAndJobId(@RequestParam Long userId, @RequestParam Long jobId){
+        Interview interview = interviewMapper.getByUserIDAndJobId(userId, jobId);
+        if (interview != null && !interview.getCompanyId().equals(UserHolder.getCompanyId())) {
+            return Result.error("无权查看该面试");
+        }
         return Result.success(interview);
     }
 

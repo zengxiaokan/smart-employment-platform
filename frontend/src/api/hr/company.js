@@ -33,3 +33,14 @@ export function getApplicationStatus() {
     method: "get",
   });
 }
+
+/**
+ * 重新申请：把被拒(auditStatus=2)状态重置为待审(0)
+ * 后端加 Redis 24h 锁,短时间内多次调用会失败
+ */
+export function reapplyCompany() {
+  return request({
+    url: "/hr/company/reapply",
+    method: "post",
+  });
+}

@@ -1,0 +1,1 @@
+import{t as e}from"./request-DhF4GGYh.js";function t(t){return e({url:`/feedbacks`,method:`get`,params:t})}function n(t){return e({url:`/feedbacks/${t}`,method:`get`})}function r(t){return e({url:`/feedbacks`,method:`post`,data:t})}export{t as n,r,n as t};

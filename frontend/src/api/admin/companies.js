@@ -16,8 +16,12 @@ export function updateCompany(id, data) {
   return request({ url: `/admin/companies/${id}`, method: 'put', data })
 }
 
-export function auditCompany(id, auditStatus) {
-  return request({ url: `/admin/companies/${id}/audit`, method: 'put', data: { auditStatus } })
+export function auditCompany(id, auditStatus, remark) {
+  return request({
+    url: `/admin/companies/${id}/audit`,
+    method: 'put',
+    data: { auditStatus, remark: remark || null },
+  })
 }
 
 export function deleteCompany(id) {

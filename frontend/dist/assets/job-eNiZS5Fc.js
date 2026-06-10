@@ -1,1 +1,0 @@
-import{t as e}from"./request-CCPAwz2u.js";function t(t){return e({url:`/hr/jobs`,method:`get`,params:t})}function n(t){return e({url:`/hr/jobs`,method:`post`,data:t})}export{n,t};

@@ -11,6 +11,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.itzk.SmartEmploymentPlatform.utils.Constant;
+import com.itzk.SmartEmploymentPlatform.utils.UserHolder;
+
 import java.util.List;
 
 @Service
@@ -62,20 +65,29 @@ public class FeedbackServiceImpl implements FeedbackService {
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public void reply(Long id, String reply) {
+        if (UserHolder.getRole() == null || UserHolder.getRole() < Constant.Role.ADMIN) {
+            throw new BusinessException("无权限操作");
+        }
         feedbackMapper.updateReply(id, reply);
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public void updateStatus(Long id, Integer status) {
+        if (UserHolder.getRole() == null || UserHolder.getRole() < Constant.Role.ADMIN) {
+            throw new BusinessException("无权限操作");
+        }
         feedbackMapper.updateStatus(id, status);
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public void delete(Long id) {
+        if (UserHolder.getRole() == null || UserHolder.getRole() < Constant.Role.ADMIN) {
+            throw new BusinessException("无权限操作");
+        }
         feedbackMapper.deleteById(id);
     }
 }

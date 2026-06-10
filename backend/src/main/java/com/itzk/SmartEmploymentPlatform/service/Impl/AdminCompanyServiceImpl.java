@@ -19,6 +19,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Map;
 
+import com.itzk.SmartEmploymentPlatform.utils.Constant;
+
 @Service
 public class AdminCompanyServiceImpl implements AdminCompanyService {
 
@@ -53,6 +55,7 @@ public class AdminCompanyServiceImpl implements AdminCompanyService {
         vo.setDescription(c.getDescription());
         vo.setLogoUrl(c.getLogoUrl());
         vo.setLicenseUrl(c.getLicenseUrl());
+        vo.setAuditRemark(c.getAuditRemark());
         vo.setJobCount(c.getJobCount());
         vo.setJobConfirm(c.getJobConfirm());
         vo.setCreatedAt(c.getCreatedAt() != null ? c.getCreatedAt().toString().replace("T", " ") : null);
@@ -133,13 +136,25 @@ public class AdminCompanyServiceImpl implements AdminCompanyService {
     }
 
     @OperationLog(action = "AUDIT_COMPANY", targetType = "company", targetId = "#id",
-                  remark = "'auditStatus=' + #auditStatus")
+                  remark = "'auditStatus=' + #auditStatus + (#remark != null ? ', remark=' + #remark : '')")
     @Override
     @Transactional
-    public void audit(Long id, Integer auditStatus) {
+    public void audit(Long id, Integer auditStatus, String remark) {
+        if (auditStatus == null
+                || auditStatus < 0 || auditStatus > 2) {
+            throw new BusinessException("审核状态非法");
+        }
+        if (auditStatus == Constant.AuditStatus.REJECTED
+                && (remark == null || remark.trim().isEmpty())) {
+            throw new BusinessException("拒绝时必须填写拒绝理由");
+        }
+        if (remark != null && remark.length() > 500) {
+            throw new BusinessException("审核备注不能超过500字");
+        }
         Company c = new Company();
         c.setId(id);
         c.setAuditStatus(auditStatus.byteValue());
+        c.setAuditRemark(remark);
         companyMapper.updataById(c);
     }
 

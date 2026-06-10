@@ -36,7 +36,7 @@
           <el-col :span="12">
             <el-form-item label="企业规模" required>
               <el-select v-model="form.size" placeholder="请选择" size="large" style="width:100%">
-                <el-option v-for="s in sizeOptions" :key="s" :label="s" :value="s" />
+                <el-option v-for="s in sizeOptions" :key="s.value" :label="s.label" :value="s.value" />
               </el-select>
             </el-form-item>
           </el-col>
@@ -110,6 +110,7 @@
       </el-form>
 
       <div class="setup-footer">
+        <el-button @click="goWorkbench">返回主页</el-button>
         <el-button @click="handleLogout" :icon="SwitchButton">退出登录</el-button>
       </div>
     </div>
@@ -129,7 +130,13 @@ const router = useRouter();
 const submitting = ref(false);
 
 const industryOptions = ["互联网", "金融", "教育", "医疗", "制造", "房地产", "电商", "物流", "新能源", "人工智能"];
-const sizeOptions = ["少于50人", "50-99人", "100-499人", "500-999人", "1000人以上"];
+const sizeOptions = [
+  { label: "少于50人", value: "0" },
+  { label: "50-99人", value: "1" },
+  { label: "100-499人", value: "2" },
+  { label: "500-999人", value: "3" },
+  { label: "1000人以上", value: "4" },
+];
 const financeOptions = [
   { label: "未融资", value: 0 }, { label: "种子轮", value: 1 }, { label: "天使轮", value: 2 },
   { label: "A轮", value: 3 }, { label: "B轮", value: 4 }, { label: "C轮及以上", value: 5 },
@@ -184,6 +191,7 @@ const submitCreate = async () => {
 };
 
 const handleLogout = () => { disconnectStomp(); resetChat(); localStorage.clear(); router.push("/login"); };
+const goWorkbench = () => { router.push("/hr"); };
 </script>
 
 <style scoped>

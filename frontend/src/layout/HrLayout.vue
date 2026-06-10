@@ -22,7 +22,10 @@ import { ElMessage } from "element-plus";
 import {
   companyApproved,
   statusChecked,
+  companyRejected,
+  auditStatus,
   checkCompanyStatus,
+  resetHrStatus,
 } from "@/utils/hrStatus";
 import { useUser } from "@/utils/useUser";
 import ChatPanel from "@/components/ChatPanel.vue";
@@ -60,6 +63,7 @@ const handleCommand = (command) => {
     resetChat();
     localStorage.clear();
     clearUser();
+    resetHrStatus();
     router.push("/login");
     ElMessage.success("已安全退出");
   }
@@ -69,6 +73,20 @@ onMounted(() => {
   loadUserInfo();
   checkCompanyStatus();
   initChat();
+});
+
+// 顶部状态条：根据 auditStatus 区分文案/颜色
+const chipText = computed(() => {
+  if (!statusChecked.value) return "企业状态查询中";
+  if (companyApproved.value) return "企业状态正常";
+  if (companyRejected.value) return "企业审核未通过";
+  if (auditStatus.value === 0) return "企业资料待审核";
+  return "企业状态未知";
+});
+const chipClass = computed(() => {
+  if (companyApproved.value) return "chip-ok";
+  if (companyRejected.value) return "chip-bad";
+  return "chip-warn";
 });
 </script>
 
@@ -200,11 +218,14 @@ onMounted(() => {
           </div>
 
           <div class="header-right">
-            <div class="header-chip">
+            <router-link v-if="!companyApproved && statusChecked" to="/hr/setup/pending" class="header-chip" :class="chipClass">
               <span class="chip-dot"></span>
-              <span>{{
-                companyApproved ? "企业状态正常" : "企业资料待审核"
-              }}</span>
+              <span>{{ chipText }}</span>
+              <span class="chip-arrow">&gt;</span>
+            </router-link>
+            <div v-else class="header-chip" :class="chipClass">
+              <span class="chip-dot"></span>
+              <span>{{ chipText }}</span>
             </div>
             <el-badge
               :is-dot="totalUnread > 0"
@@ -240,19 +261,6 @@ onMounted(() => {
         </el-header>
 
         <el-main class="workbench-main">
-          <div v-if="statusChecked && !companyApproved" class="approval-banner">
-            <el-alert
-              type="warning"
-              :closable="false"
-              show-icon
-              class="approval-alert"
-            >
-              <template #title>
-                <strong>企业审核中</strong>
-              </template>
-              您的企业资质正在审核中，审核通过后即可使用职位管理、人才搜索等全部功能。当前仅可管理企业信息。
-            </el-alert>
-          </div>
           <div class="content-wrapper">
             <router-view></router-view>
           </div>
@@ -607,6 +615,66 @@ onMounted(() => {
   background: #f8fafc;
 }
 
+/* clickable chip: router-link 样式覆盖 */
+a.header-chip {
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+a.header-chip:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.chip-arrow {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 700;
+}
+
+.header-nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  transition: all 0.28s ease;
+}
+.header-nav-link:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+  transform: translateY(-1px);
+}
+
+.header-chip.chip-ok {
+  color: #166534;
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+.header-chip.chip-warn {
+  color: #92400e;
+  border-color: #fde68a;
+  background: #fffbeb;
+}
+.header-chip.chip-bad {
+  color: #991b1b;
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.banner-link {
+  color: #1d4ed8;
+  font-weight: 700;
+  text-decoration: underline;
+  margin: 0 2px;
+}
+
 .chip-dot {
   width: 8px;
   height: 8px;
@@ -676,22 +744,9 @@ onMounted(() => {
   background: transparent;
 }
 
-.approval-banner,
 .content-wrapper {
   max-width: 1440px;
   margin: 0 auto;
-}
-
-.approval-banner {
-  margin-bottom: 16px;
-}
-
-.approval-alert {
-  border-radius: 20px;
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
-}
-
-.content-wrapper {
   border-radius: 30px;
   position: relative;
 }
